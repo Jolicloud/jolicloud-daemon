@@ -1,5 +1,4 @@
 *.pyc
-dropin.cache
 /debian/files
 /debian/jolicloud-pkg-daemon/*
 /debian/jolicloud-pkg-daemon.*.debhelper
