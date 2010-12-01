@@ -1,0 +1,8 @@
+*.pyc
+dropin.cache
+/debian/files
+/debian/jolicloud-pkg-daemon/*
+/debian/jolicloud-pkg-daemon.*.debhelper
+/debian/python-module-stampdir
+/debian/jolicloud-pkg-daemon.substvars
+/debian/jolicloud-pkg-daemon.debhelper.log
