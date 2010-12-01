@@ -1,0 +1,43 @@
+#!/usr/bin/python
+
+import os
+import optparse
+
+parser = optparse.OptionParser(usage='%prog [options]')
+
+parser.add_option(
+    '-l',
+    '--local-dirs',
+    action='store_true',
+    dest='use_local_dirs',
+    help='Use files from the local directory tree'
+)
+parser.add_option(
+    '-d',
+    '--debug',
+    action='store_true',
+    dest='use_debug',
+    help='Debug mode (no blacklist, no reboot)'
+)
+
+(options, args) = parser.parse_args()
+if options.use_local_dirs:
+    ENV_PATHS = {
+        'JPD_HTDOCS_PATH' : 'htdocs/',
+    }
+else:
+    ENV_PATHS = {
+        'JPD_HTDOCS_PATH' : '/usr/share/jolicloud-pkg-daemon/htdocs/',
+    }
+
+if options.use_debug:
+    os.environ.setdefault('JPD_DEBUG', '1')
+
+#must set variables before importing Globals because it requires them
+for var, path in ENV_PATHS.iteritems():
+    #if it is not already set, set the enviroment variable.
+    os.environ.setdefault(var, path)
+
+from jolicloud_pkg_daemon.main import start
+
+start()

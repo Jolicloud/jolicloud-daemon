@@ -1,0 +1,58 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Daemon web socket client</title>
+</head>
+<body>
+    <h2>Web socket client</h2>
+    <p>See READMEs in script tag.</p>
+    <p>This file can be viewed using file:// protocol or by going to 
+    <a href="http://localhost:8004/test-ws-client.html">http://localhost:8004/test-ws-client.html</a> when jolicloud-daemon is running (jolicloud-daemon understands http on the same port as the web socket). 
+    <p>To start server:</p>
+
+    <p>
+        <code>
+            jolicloud-daemon -d
+        </code>
+    </p>
+    <p>Set your breakpoints in ws_interface/ws_wsh.py.</p>
+    <script type="text/javascript">
+        console.log("test");
+        
+        /**
+         * README: set these variables. You need to use the local ip
+         * (as opposed to localhost or 127.0.0.1 because of
+         * http://bit.ly/bug36652
+         */
+        var your_local_ip = 'localhost';
+        var your_socket_port = '8004';
+        
+        var url = 'ws://' + your_local_ip + ':' + your_socket_port + '/jolicloud/';
+        var ws = new WebSocket(url);
+        ws.onmessage = function(e) {
+            /**
+             * README: responses from the server are logged to the console
+             */
+            console.log(e.data);
+        };
+        ws.onclose = function(e) {
+            console.log('Socket closed.');
+        };
+        window.onunload = function() {
+            ws.close();
+        };
+        
+        /**
+         * README: Call this function directly in the console to
+         * send messages to the server.
+         */
+        function send(str) {
+            ws.send(str);
+        }
+        
+        send('test');
+    </script>
+
+</body>
+</html>
