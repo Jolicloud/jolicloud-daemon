@@ -43,7 +43,7 @@ from jolicloud_pkg_daemon import managers
 
 TRUSTED_URI = (
     # re.compile(".*"),
-    re.compile("https?://my\.jolicloud\.com"),
+    re.compile("https?://my\.jolicloud\.(com|local)"),
     re.compile("https?://.*\.dev\.jolicloud\.org"),
     re.compile("http://localhost")
 )
@@ -193,7 +193,10 @@ def start():
     site = JolicloudWSSite(**kwargs)
     site.addHandler('/jolicloud/', JolicloudWSHandler)
     
-    reactor.listenTCP(8005, site) # interface = "127.0.0.1"
+    if os.environ.get('JPD_DEBUG', '0') == '1':
+        reactor.listenTCP(8005, site)
+    else:
+        reactor.listenTCP(8005, site, interface='127.0.0.1')
     reactor.run()
 
 if __name__ == "__main__":
