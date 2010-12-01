@@ -1,3 +1,10 @@
+jolicloud-pkg-daemon (0.2) robby; urgency=low
+
+  * Improved security.
+  * Fixed dropin.cache problem.
+
+ -- Jérémy Bethmont <jerem@jolicloud.org>  Wed, 01 Dec 2010 16:37:33 +0100
+
 jolicloud-pkg-daemon (0.1) robby; urgency=low
 
   * Initial release.

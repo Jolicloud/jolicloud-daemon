@@ -137,7 +137,7 @@ class PackagesManager(BaseManager):
         def get_package(i, p_id, summary):
             t = Transaction(self.dbus_system, request, handler)
             if method == 'InstallPackages':
-                t.run(method, True, [p_id])
+                t.run(method, False, [p_id])
             elif method == 'RemovePackages':
                 t.run(method, [p_id], True, True)
         
