@@ -6,3 +6,4 @@ dropin.cache
 /debian/python-module-stampdir
 /debian/jolicloud-pkg-daemon.substvars
 /debian/jolicloud-pkg-daemon.debhelper.log
+/build
