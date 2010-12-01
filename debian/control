@@ -1,0 +1,13 @@
+Source: jolicloud-pkg-daemon
+Section: jolicloud/net
+Priority: optional
+Maintainer: Jolicloud developers <developers@jolicloud.org>
+Build-Depends: cdbs (>= 0.4.49), debhelper (>= 7), python (>= 2.4), python-support
+Standards-Version: 3.8.0
+Homepage: http://www.jolicloud.com
+
+Package: jolicloud-pkg-daemon
+Architecture: any
+Depends: python (>=2.6), python-twisted, python-simplejson
+Description: Jolicloud Pkg Daemon
+
