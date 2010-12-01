@@ -18,5 +18,6 @@ setup(
     scripts=['jolicloud-pkg-daemon'],
     data_files=[
         ('share/jolicloud-pkg-daemon/htdocs', glob.glob('htdocs/*'))
-    ]
+    ],
+    package_data={'jolicloud_pkg_daemon/managers': ['dropin.cache']}
 )
