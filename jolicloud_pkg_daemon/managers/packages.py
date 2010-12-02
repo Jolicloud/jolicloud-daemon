@@ -8,7 +8,7 @@ import dbus
 from twisted.python import log
 from twisted.internet import reactor, protocol
 
-from jolicloud_pkg_daemon.plugins import BaseManager, _need_dbus
+from jolicloud_pkg_daemon.plugins import BaseManager
 from jolicloud_pkg_daemon.enums import *
 
 class Transaction():
@@ -24,8 +24,8 @@ class Transaction():
         'org.freedesktop.DBus.Error.TimedOut'
     ]
     
-    def __init__(self, dbus_system, request, handler):
-        self.dbus_system = dbus_system
+    def __init__(self, request, handler):
+        self.dbus_system = dbus.SystemBus()
         self.request = request
         self.handler = handler
     
@@ -51,8 +51,11 @@ class Transaction():
             except (AttributeError, dbus.DBusException), e:
                 if self.pk_control == None or (hasattr(e, '_dbus_error_name') and e._dbus_error_name in self.known_errors):
                     # first initialization (lazy) or timeout
-                    self.dbus_system = dbus.SystemBus()
-                    #dbus_system = self.dbus_system
+                    if self.pk_control != None:
+                        log.msg('Warning, starting a new dbus system because of: %s' % e._dbus_error_name)
+                        self.dbus_system.set_exit_on_disconnect(False)
+                        self.dbus_system.close()
+                        self.dbus_system = dbus.SystemBus()
                     self.pk_control = dbus.Interface(self.dbus_system.get_object(
                         'org.freedesktop.PackageKit',
                         '/org/freedesktop/PackageKit',
@@ -72,6 +75,8 @@ class Transaction():
     
     def _s_ErrorCode(self, code, details):
         log.msg('ErrorCode [%s] [%s]' % (code, details))
+        if hasattr(self, 'ErrorCode'):
+            return getattr(self, 'ErrorCode')(code, details)
     
     #def _s_Files(self, package_id, file_list):
     #    log.msg('Files')
@@ -135,6 +140,9 @@ class Transaction():
         log.msg('[%s] Destroy' % self.tid)
 
 class PackagesManager(BaseManager):
+    def __init__(self):
+        log.msg('================== INIT PackagesManager ==================')
+    
     def _install_remove(self, method, request, handler, package):
         result = []
         def resolve_package(i, p_id, summary):
@@ -142,7 +150,7 @@ class PackagesManager(BaseManager):
             result.append(str(p_id))
         def resolve_finished(exit, runtime):
             if exit == 'success':
-                t = Transaction(self.dbus_system, request, handler)
+                t = Transaction(request, handler)
                 log.msg('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> %s %s' % (method, result))
                 if method == 'InstallPackages':
                     t.run(method, False, result)
@@ -151,7 +159,7 @@ class PackagesManager(BaseManager):
             else:
                 return handler.send_meta(OPERATION_FAILED, request=request)
 
-        t = Transaction(self.dbus_system, request, handler)
+        t = Transaction(request, handler)
         t._s_Package = resolve_package
         t._s_Finished = resolve_finished
         t._s_Changed = None
@@ -163,17 +171,14 @@ class PackagesManager(BaseManager):
         t.run('Resolve', 'none', package)
         # apt-cache show `dpkg-query -W --showformat='${Package}=${Version}' gajim` | egrep '(Package|Version|Architecture|Filename)'
     
-    @_need_dbus
     def install(self, request, handler, package):
         self._install_remove('InstallPackages', request, handler, package)
     
-    @_need_dbus
     def remove(self, request, handler, package):
         if package == 'nickel-codecs-ffmpeg-nonfree':
             return self._install_remove('InstallPackages', request, handler, 'nickel-codecs-ffmpeg')
         self._install_remove('RemovePackages', request, handler, package)
     
-    @_need_dbus
     def list_(self, request, handler):
         # PackageKit is buggy, it crashs when doing a GetPackages:
         # (jerem: ~) pkcon get-packages 
@@ -199,7 +204,7 @@ class PackagesManager(BaseManager):
         #                handler.send_meta(OPERATION_SUCCESSFUL, request=request)
         #            else:
         #                handler.send_meta(OPERATION_FAILED, request=request)
-        #        t = Transaction(self.dbus_system, request, handler)
+        #        t = Transaction(request, handler)
         #        t._s_Package = get_package
         #        t._s_Finished = finished
         #        t.run('GetPackages', 'installed')
@@ -229,12 +234,10 @@ class PackagesManager(BaseManager):
             ['dpkg-query', '-W', '--showformat=${Package}:${Status}\n']
         )
     
-    @_need_dbus
     def check_updates(self, request, handler, force_reload=True):
-        t = Transaction(self.dbus_system, request, handler)
+        t = Transaction(request, handler)
         t.run('RefreshCache', force_reload)
     
-#    @_need_dbus
 #    def list_updates(self, request, handler):
 #        # name, summary, info, ver, size?
 #        packages = {}
@@ -243,7 +246,7 @@ class PackagesManager(BaseManager):
 #            packages[str(p_id)] = {'summary': str(summary)}
 #        def finished(exit, runtime):
 #            if exit == 'success':
-#                t = Transaction(self.dbus_system, request, handler)
+#                t = Transaction(request, handler)
 #                def update_details(package_id, updates, obsoletes, vendor_url,
 #                                   bugzilla_url, cve_url, restart, update_text,
 #                                   changelog, state, issued, updated):
@@ -267,13 +270,12 @@ class PackagesManager(BaseManager):
 #                t.run('GetUpdateDetail', packages.keys())
 #            else:
 #                handler.send_meta(OPERATION_FAILED, request=request)
-#        t = Transaction(self.dbus_system, request, handler)
+#        t = Transaction(request, handler)
 #        t._s_Package = get_package
 #        t._s_Finished = finished
 #        t._s_Changed = None
 #        t.run('GetUpdates', 'installed')
 
-    @_need_dbus
     def list_updates(self, request, handler):
         # name, summary, info, ver, size?
         result = []
@@ -291,15 +293,14 @@ class PackagesManager(BaseManager):
                 handler.send_meta(OPERATION_SUCCESSFUL, request=request)
             else:
                 handler.send_meta(OPERATION_FAILED, request=request)
-        t = Transaction(self.dbus_system, request, handler)
+        t = Transaction(request, handler)
         t._s_Package = get_package
         t._s_Finished = finished
         t._s_Changed = None
         t.run('GetUpdates', 'installed')
 
-    @_need_dbus
     def perform_updates(self, request, handler):
-        t = Transaction(self.dbus_system, request, handler)
+        t = Transaction(request, handler)
         t.run('UpdateSystem', False)
 
 packagesManager = PackagesManager()
