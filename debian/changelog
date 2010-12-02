@@ -1,3 +1,10 @@
+jolicloud-pkg-daemon (0.3) robby; urgency=low
+
+  * Allow unsigned packages install.
+  * Reinit dbus connection in case of error.
+
+ -- Jérémy Bethmont <jerem@jolicloud.org>  Thu, 02 Dec 2010 15:26:26 +0100
+
 jolicloud-pkg-daemon (0.2) robby; urgency=low
 
   * Improved security.
