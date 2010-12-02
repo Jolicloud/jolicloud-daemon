@@ -51,6 +51,8 @@ class Transaction():
             except (AttributeError, dbus.DBusException), e:
                 if self.pk_control == None or (hasattr(e, '_dbus_error_name') and e._dbus_error_name in self.known_errors):
                     # first initialization (lazy) or timeout
+                    self.dbus_system = dbus.SystemBus()
+                    #dbus_system = self.dbus_system
                     self.pk_control = dbus.Interface(self.dbus_system.get_object(
                         'org.freedesktop.PackageKit',
                         '/org/freedesktop/PackageKit',
@@ -134,18 +136,32 @@ class Transaction():
 
 class PackagesManager(BaseManager):
     def _install_remove(self, method, request, handler, package):
-        def get_package(i, p_id, summary):
-            t = Transaction(self.dbus_system, request, handler)
-            if method == 'InstallPackages':
-                t.run(method, False, [p_id])
-            elif method == 'RemovePackages':
-                t.run(method, [p_id], True, True)
-        
+        result = []
+        def resolve_package(i, p_id, summary):
+            log.msg('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Resolve RECEIVED %s' % p_id)
+            result.append(str(p_id))
+        def resolve_finished(exit, runtime):
+            if exit == 'success':
+                t = Transaction(self.dbus_system, request, handler)
+                log.msg('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> %s %s' % (method, result))
+                if method == 'InstallPackages':
+                    t.run(method, False, result)
+                elif method == 'RemovePackages':
+                    t.run(method, result, False, True)
+            else:
+                return handler.send_meta(OPERATION_FAILED, request=request)
+
         t = Transaction(self.dbus_system, request, handler)
-        t._s_Package = get_package
+        t._s_Package = resolve_package
+        t._s_Finished = resolve_finished
         t._s_Changed = None
-        t._s_Finished = None
-        t.run('Resolve', 'none', [package])
+        if package == 'opera-jolicloud':
+            package = ['opera-jolicloud', 'opera']
+        else:
+            package = [package]
+        log.msg('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Resolve %s' % package)
+        t.run('Resolve', 'none', package)
+        # apt-cache show `dpkg-query -W --showformat='${Package}=${Version}' gajim` | egrep '(Package|Version|Architecture|Filename)'
     
     @_need_dbus
     def install(self, request, handler, package):
