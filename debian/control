@@ -8,6 +8,6 @@ Homepage: http://www.jolicloud.com
 
 Package: jolicloud-pkg-daemon
 Architecture: any
-Depends: python (>=2.6), python-twisted, python-simplejson
+Depends: python (>=2.6), python-twisted-core, python-twisted-web, python-simplejson
 Description: Jolicloud Pkg Daemon
 
