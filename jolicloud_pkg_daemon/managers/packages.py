@@ -119,9 +119,17 @@ class Transaction():
     #    log.msg('DistroUpgrade')
     
     def _s_Changed(self):
-        status = self.properties.Get('org.freedesktop.PackageKit.Transaction', 'Status')
+        # TODO: Do a GetAll to limit the number of DBus call
+        try:
+            status = self.properties.Get('org.freedesktop.PackageKit.Transaction', 'Status')
+        except dbus.DBusException, e:
+            log.msg('Warning, DBus error: %s' % e._dbus_error_name)
+            return self.handler.send_meta(OPERATION_FAILED, request=self.request)
         try:
             progress = self.properties.Get('org.freedesktop.PackageKit.Transaction', 'Percentage')
+        except dbus.DBusException, e:
+            log.msg('Warning, DBus error: %s' % e._dbus_error_name)
+            return self.handler.send_meta(OPERATION_FAILED, request=self.request)
         except:
             progress = 0
         
@@ -149,7 +157,7 @@ class PackagesManager(BaseManager):
             log.msg('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Resolve RECEIVED %s' % p_id)
             result.append(str(p_id))
         def resolve_finished(exit, runtime):
-            if exit == 'success':
+            if exit == 'success' and len(result):
                 t = Transaction(request, handler)
                 log.msg('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> %s %s' % (method, result))
                 if method == 'InstallPackages':
