@@ -1,3 +1,9 @@
+jolicloud-pkg-daemon (1.1.0) robby; urgency=low
+
+  * Updated dependencies.
+
+ -- Jérémy Bethmont <jerem@jolicloud.org>  Fri, 03 Dec 2010 18:37:02 +0100
+
 jolicloud-pkg-daemon (0.4) robby; urgency=low
 
   * Fixed LimitExeeded by restarting the system dbus connection.
