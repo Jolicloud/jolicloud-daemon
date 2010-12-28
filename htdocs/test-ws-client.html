@@ -8,7 +8,7 @@
     <h2>Web socket client</h2>
     <p>See READMEs in script tag.</p>
     <p>This file can be viewed using file:// protocol or by going to 
-    <a href="http://localhost:8004/test-ws-client.html">http://localhost:8004/test-ws-client.html</a> when jolicloud-daemon is running (jolicloud-daemon understands http on the same port as the web socket). 
+    <a href="http://localhost:8005/test-ws-client.html">http://localhost:8005/test-ws-client.html</a> when jolicloud-daemon is running (jolicloud-daemon understands http on the same port as the web socket). 
     <p>To start server:</p>
 
     <p>
@@ -26,7 +26,7 @@
          * http://bit.ly/bug36652
          */
         var your_local_ip = 'localhost';
-        var your_socket_port = '8004';
+        var your_socket_port = '8005';
         
         var url = 'ws://' + your_local_ip + ':' + your_socket_port + '/jolicloud/';
         var ws = new WebSocket(url);

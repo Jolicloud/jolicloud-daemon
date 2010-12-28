@@ -5,11 +5,15 @@ __author__ = 'Jeremy Bethmont'
 import os
 import dbus
 
+from functools import partial
+
 from twisted.python import log
 from twisted.internet import reactor, protocol
 
-from jolicloud_pkg_daemon.plugins import BaseManager
+from jolicloud_pkg_daemon.plugins import LinuxBaseManager
 from jolicloud_pkg_daemon.enums import *
+
+AUTO_UPDATE_INTERVAL = 600 # Time in seconds
 
 class Transaction():
     
@@ -23,11 +27,20 @@ class Transaction():
         'org.freedesktop.DBus.Error.LimitsExceeded',
         'org.freedesktop.DBus.Error.TimedOut'
     ]
+    sigs = []
     
     def __init__(self, request, handler):
+        self.sigs = []
         self.dbus_system = dbus.SystemBus()
         self.request = request
         self.handler = handler
+    
+    def get_property(self, key):
+        proxy = dbus.Interface(self.dbus_system.get_object(
+            'org.freedesktop.PackageKit',
+            '/org/freedesktop/PackageKit'
+        ), dbus.PROPERTIES_IFACE)
+        return proxy.Get('org.freedesktop.PackageKit', key)
     
     def run(self, command, *args):
         def run_it():
@@ -41,7 +54,7 @@ class Transaction():
             self.properties = dbus.Interface(self.transaction, dbus_interface=dbus.PROPERTIES_IFACE)
             for s in dir(self):
                 if getattr(self, s) != None and s.startswith('_s_'):
-                    self.transaction.connect_to_signal(s.replace('_s_', ''), getattr(self, s))
+                    self.sigs.append(self.transaction.connect_to_signal(s.replace('_s_', ''), getattr(self, s)))
             getattr(self.transaction, command)(*args)
         
         while True:
@@ -146,20 +159,69 @@ class Transaction():
     
     def _s_Destroy(self):
         log.msg('[%s] Destroy' % self.tid)
+        for sig in self.sigs:
+            sig.remove()
 
-class PackagesManager(BaseManager):
+class PackagesManager(LinuxBaseManager):
+    _auto_updating = False
+    _transactions = {}
+    
     def __init__(self):
         log.msg('================== INIT PackagesManager ==================')
+        
+    def _auto_update(self, request, handler):
+        if self._auto_updating == True:
+            log.msg('Another auto update is in progress, cancelling this attempt')
+        else:
+            rc_transaction = Transaction(None, None)
+            def rc_finished(exit, runtime):
+                if exit == 'success':
+                    gu_result = []
+                    def gu_get_package(i, p_id, summary):
+                        gu_result.append(str(p_id))
+                    def gu_finished(exit, runtime):
+                        if exit == 'success':
+                            if not len(gu_result):
+                                self._auto_updating = False
+                                handler.send_data(request, {'updates_ready': False})
+                                return log.msg('Nothing to Autoupdate')
+                            dp_transaction = Transaction(None, None)
+                            def dp_finished(exit, runtime):
+                                handler.send_data(request, {'updates_ready': True})
+                                log.msg('Autoupdate finished')
+                                self._auto_updating = False
+                            dp_transaction._s_Finished = dp_finished
+                            dp_transaction._s_Changed = None
+                            dp_transaction.run('DownloadPackages', gu_result)
+                        else:
+                            log.msg('Autoupdate aborted')
+                            self._auto_updating = False
+                    gu_transaction = Transaction(None, None)
+                    gu_transaction._s_Package = gu_get_package
+                    gu_transaction._s_Finished = gu_finished
+                    gu_transaction._s_Changed = None
+                    gu_transaction.run('GetUpdates', 'installed')
+                else:
+                    self._auto_updating = False
+                    log.msg('Autoupdate aborted')
+            rc_transaction._s_Finished = rc_finished
+            rc_transaction._s_Changed = None
+            network_state = rc_transaction.get_property('NetworkState')
+            if network_state != 'offline':
+                self._auto_updating = True
+                log.msg('Sarting an autoupdate')
+                rc_transaction.run('RefreshCache', True)
+            else:
+                log.msg('No internet connection, not starting the autoupdate')
+        reactor.callLater(AUTO_UPDATE_INTERVAL, partial(self._auto_update, request, handler))
     
     def _install_remove(self, method, request, handler, package):
         result = []
         def resolve_package(i, p_id, summary):
-            log.msg('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Resolve RECEIVED %s' % p_id)
             result.append(str(p_id))
         def resolve_finished(exit, runtime):
             if exit == 'success' and len(result):
                 t = Transaction(request, handler)
-                log.msg('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> %s %s' % (method, result))
                 if method == 'InstallPackages':
                     t.run(method, False, result)
                 elif method == 'RemovePackages':
@@ -175,7 +237,6 @@ class PackagesManager(BaseManager):
             package = ['opera-jolicloud', 'opera']
         else:
             package = [package]
-        log.msg('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Resolve %s' % package)
         t.run('Resolve', 'none', package)
         # apt-cache show `dpkg-query -W --showformat='${Package}=${Version}' gajim` | egrep '(Package|Version|Architecture|Filename)'
     
@@ -246,58 +307,19 @@ class PackagesManager(BaseManager):
         t = Transaction(request, handler)
         t.run('RefreshCache', force_reload)
     
-#    def list_updates(self, request, handler):
-#        # name, summary, info, ver, size?
-#        packages = {}
-#        result = []
-#        def get_package(i, p_id, summary):
-#            packages[str(p_id)] = {'summary': str(summary)}
-#        def finished(exit, runtime):
-#            if exit == 'success':
-#                t = Transaction(request, handler)
-#                def update_details(package_id, updates, obsoletes, vendor_url,
-#                                   bugzilla_url, cve_url, restart, update_text,
-#                                   changelog, state, issued, updated):
-#                    result.append({
-#                        'name': str(package_id).split(';')[0],
-#                        'summary': packages[str(package_id)]['summary'],
-#                        'info': '', # TODO
-#                        'ver': str(package_id).split(';')[1]
-#                        # TODO: Size
-#                    })
-#                def update_finished(exit, runtime):
-#                    log.msg('List Updates Finished [%s] [%s]' % (exit, runtime))
-#                    if exit == 'success':
-#                        handler.send_data(request, result)
-#                        handler.send_meta(OPERATION_SUCCESSFUL, request=request)
-#                    else:
-#                        handler.send_meta(OPERATION_FAILED, request=request)
-#                t._s_UpdateDetail = update_details
-#                t._s_Finished = update_finished
-#                t._s_Changed = None
-#                t.run('GetUpdateDetail', packages.keys())
-#            else:
-#                handler.send_meta(OPERATION_FAILED, request=request)
-#        t = Transaction(request, handler)
-#        t._s_Package = get_package
-#        t._s_Finished = finished
-#        t._s_Changed = None
-#        t.run('GetUpdates', 'installed')
-
     def list_updates(self, request, handler):
-        # name, summary, info, ver, size?
-        result = []
-        def get_package(i, p_id, summary):
-            result.append({
-                'name': str(p_id).split(';')[0],
+        result = {}
+        def get_package(info, package_id, summary):
+            result[str(package_id)] = {
+                'name': str(package_id).split(';')[0],
                 'summary': str(summary),
-                'info': '', # TODO
-                'ver': str(p_id).split(';')[1]
+                'info': str(info),
+                'ver': str(package_id).split(';')[1]
                 # TODO: Size
-            })
+            }
         def finished(exit, runtime):
             if exit == 'success':
-                handler.send_data(request, result)
+                handler.send_data(request, result.values())
                 handler.send_meta(OPERATION_SUCCESSFUL, request=request)
             else:
                 handler.send_meta(OPERATION_FAILED, request=request)
@@ -310,6 +332,10 @@ class PackagesManager(BaseManager):
     def perform_updates(self, request, handler):
         t = Transaction(request, handler)
         t.run('UpdateSystem', False)
+
+    def event_register(self, request, handler, event):
+        if event == 'packages/auto_update':
+            reactor.callLater(AUTO_UPDATE_INTERVAL, partial(self._auto_update, request, handler))
 
 packagesManager = PackagesManager()
 

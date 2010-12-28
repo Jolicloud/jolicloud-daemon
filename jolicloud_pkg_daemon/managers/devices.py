@@ -8,10 +8,10 @@ from functools import partial
 
 from twisted.python import log
 
-from jolicloud_pkg_daemon.plugins import BaseManager, _need_dbus
+from jolicloud_pkg_daemon.plugins import LinuxBaseManager
 from jolicloud_pkg_daemon.enums import *
 
-class DevicesManager(BaseManager):
+class DevicesManager(LinuxBaseManager):
     
     _hal_proxy = None
     
@@ -22,7 +22,6 @@ class DevicesManager(BaseManager):
                 '/org/freedesktop/Hal/Manager'
             ) 
     
-    @_need_dbus
     def event_register(self, request, handler, event):
         self._get_hal_proxy()
         

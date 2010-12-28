@@ -3,10 +3,10 @@ import os
 from twisted.internet.utils import getProcessValue
 from twisted.internet.defer import Deferred
 
-from jolicloud_pkg_daemon.plugins import BaseManager
+from jolicloud_pkg_daemon.plugins import LinuxBaseManager
 from jolicloud_pkg_daemon.enums import *
 
-class FoldersManager(BaseManager):
+class FoldersManager(LinuxBaseManager):
     
     def favorites(self, request, handler):
         def get_favorites(res):

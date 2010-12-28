@@ -4,7 +4,6 @@ __author__ = 'Jeremy Bethmont'
 
 import os
 import sys
-import time
 import re
 
 # XXX: try to use cjson which is much faster
@@ -14,7 +13,6 @@ except ImportError:
     import simplejson as json
 
 # We try to import D-Bus if present
-dbus_imported = False
 try:
     import dbus
     
@@ -25,7 +23,6 @@ try:
     # We get the system and session buses
     from dbus.mainloop.glib import DBusGMainLoop
     DBusGMainLoop(set_as_default=True)
-    dbus_imported = True
 except ImportError:
     pass
 
@@ -34,6 +31,7 @@ from twisted.python import log
 from twisted.internet.protocol import Protocol, Factory
 from twisted.web import resource
 from twisted.web.static import File
+from twisted.web.server import Request
 from twisted.plugin import getPlugins
 
 from jolicloud_pkg_daemon.websocket import WebSocketRequest, WebSocketHandler, WebSocketSite
@@ -60,37 +58,32 @@ class JolicloudRequest(object):
 
 class JolicloudWSRequest(WebSocketRequest):
     def process(self):
-        def finish():
-            self.channel.transport.loseConnection()
-        origin = self.requestHeaders.getRawHeaders('origin', [])
-        if len(origin) != 1:
-            log.msg('Refusing connection because no origin is set.')
-            return finish()
-        origin = origin[0].strip()
-        accepted = False
-        for uri in TRUSTED_URI:
-            if uri.match(origin):
-                accepted = True
-                break
-        if accepted:
-            log.msg('Accepting connection from [%s]' % origin)
+        if (self.requestHeaders.getRawHeaders("Upgrade") == ["WebSocket"] and
+            self.requestHeaders.getRawHeaders("Connection") == ["Upgrade"]):
+            origin = self.requestHeaders.getRawHeaders('origin', [])
+            if len(origin) != 1:
+                log.msg('Refusing connection because no origin is set.')
+                return self.channel.transport.loseConnection()
+            origin = origin[0].strip()
+            accepted = False
+            for uri in TRUSTED_URI:
+                if uri.match(origin):
+                    accepted = True
+                    break
+            if accepted:
+                log.msg('Accepting connection from [%s]' % origin)
+            else:
+                log.msg('Refusing connection from [%s]' % origin)
+                return self.channel.transport.loseConnection()
+            return self.processWebSocket()
         else:
-            log.msg('Refusing connection from [%s]' % origin)
-            return finish()
-        WebSocketRequest.process(self)
+            return Request.process(self)
 
 class JolicloudWSSite(WebSocketSite):
-
     requestFactory = JolicloudWSRequest
-    
-    def __init__(self, resource, logPath=None, timeout=60*60*12,
-                 supportedProtocols=None, dbus_session=None, 
-                 dbus_system=None):
-        if dbus_session: self.dbus_session = dbus_session
-        if dbus_system: self.dbus_system = dbus_system
-        WebSocketSite.__init__(self, resource, logPath, timeout)
 
 class JolicloudWSHandler(WebSocketHandler):
+
     def __init__(self, transport, factory):
         WebSocketHandler.__init__(self, transport, factory)
 
@@ -185,11 +178,6 @@ def start():
     
     # Websocket server
     kwargs = { 'resource': File(os.environ['JPD_HTDOCS_PATH']) }
-    if dbus_imported:
-        kwargs.update({
-            'dbus_system': dbus.SystemBus(),
-            'dbus_session': dbus.SessionBus(),
-        })
     site = JolicloudWSSite(**kwargs)
     site.addHandler('/jolicloud/', JolicloudWSHandler)
     
@@ -197,6 +185,12 @@ def start():
         reactor.listenTCP(8005, site)
     else:
         reactor.listenTCP(8005, site, interface='127.0.0.1')
+    
+    # We load the plugins:
+    log.msg('We load the plugins')
+    for plugin in getPlugins(ijolidaemon.IManager, managers):
+        print plugin.__class__.__name__
+    
     reactor.run()
 
 if __name__ == "__main__":
