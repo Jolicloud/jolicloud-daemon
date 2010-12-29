@@ -168,7 +168,31 @@ class PackagesManager(LinuxBaseManager):
     
     def __init__(self):
         log.msg('================== INIT PackagesManager ==================')
-        
+    
+    def _on_cellular_network(self):
+        """
+        We check if the default connection use one of the following DeviceType:
+            
+         - NM_DEVICE_TYPE_GSM = 3
+                The device is a GSM-based cellular WAN device.
+         - NM_DEVICE_TYPE_CDMA = 4
+                The device is a CDMA/IS-95-based cellular WAN device.
+        """
+        system_bus = dbus.SystemBus()
+        network_obj = system_bus.get_object(
+            'org.freedesktop.NetworkManager',
+            '/org/freedesktop/NetworkManager'
+        )
+        for connection in network_obj.Get('org.freedesktop.NetworkManager', 'ActiveConnections'):
+            o_ca = system_bus.get_object('org.freedesktop.NetworkManager', connection)
+            if o_ca.Get('org.freedesktop.NetworkManager.Connection.Active', 'Default') == 1:
+                for device in o_ca.Get('org.freedesktop.NetworkManager.Connection.Active', 'Devices'):
+                   o_d = system_bus.get_object('org.freedesktop.NetworkManager', device)
+                   device_type = o_d.Get('org.freedesktop.NetworkManager.Device', 'DeviceType')
+                   if device_type in (3, 4):
+                        return True
+        return False
+    
     def _auto_update(self, request, handler):
         if self._auto_updating == True:
             log.msg('Another auto update is in progress, cancelling this attempt')
@@ -208,9 +232,12 @@ class PackagesManager(LinuxBaseManager):
             rc_transaction._s_Changed = None
             network_state = rc_transaction.get_property('NetworkState')
             if network_state != 'offline':
-                self._auto_updating = True
-                log.msg('Sarting an autoupdate')
-                rc_transaction.run('RefreshCache', True)
+                if self._on_cellular_network():
+                    log.msg('On cellular network, not starting the autoupdate')
+                else:
+                    self._auto_updating = True
+                    log.msg('Sarting an autoupdate')
+                    rc_transaction.run('RefreshCache', True)
             else:
                 log.msg('No internet connection, not starting the autoupdate')
         reactor.callLater(AUTO_UPDATE_INTERVAL, partial(self._auto_update, request, handler))
