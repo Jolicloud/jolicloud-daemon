@@ -8,9 +8,9 @@ import subprocess
 
 from twisted.python import log
 
-from jolicloud_pkg_daemon.plugins import LinuxBaseManager
+from jolicloud_pkg_daemon.plugins import LinuxSessionManager
 
-class NetworkManager(LinuxBaseManager):
+class NetworkManager(LinuxSessionManager):
     
     _NS = 'org.freedesktop.NetworkManager'
     _CONNECTION_ACTIVE_NS = 'org.freedesktop.NetworkManager.Connection.Active'

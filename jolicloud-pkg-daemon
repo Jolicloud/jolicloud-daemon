@@ -10,33 +10,43 @@ parser.add_option(
     '--local-dirs',
     action='store_true',
     dest='use_local_dirs',
-    help='Use files from the local directory tree'
+    help='Use files from the local directory tree.'
 )
 parser.add_option(
     '-d',
     '--debug',
     action='store_true',
     dest='use_debug',
-    help='Debug mode (no blacklist, no reboot)'
+    help='Enable debug mode.'
+)
+parser.add_option(
+    '-e',
+    '--session',
+    action='store_true',
+    dest='use_session',
+    help='Use the standard configuration file for the per-login-session daemon.'
+)
+parser.add_option(
+    '-y',
+    '--system',
+    action='store_true',
+    dest='use_system',
+    help='Use the standard configuration file for the systemwide daemon.'
 )
 
 (options, args) = parser.parse_args()
+
 if options.use_local_dirs:
-    ENV_PATHS = {
-        'JPD_HTDOCS_PATH' : 'htdocs/',
-    }
+    os.environ.setdefault('JPD_HTDOCS_PATH', 'htdocs/')
 else:
-    ENV_PATHS = {
-        'JPD_HTDOCS_PATH' : '/usr/share/jolicloud-pkg-daemon/htdocs/',
-    }
+    os.environ.setdefault('JPD_HTDOCS_PATH', '/usr/share/jolicloud-pkg-daemon/htdocs/')
 
 if options.use_debug:
     os.environ.setdefault('JPD_DEBUG', '1')
 
-#must set variables before importing Globals because it requires them
-for var, path in ENV_PATHS.iteritems():
-    #if it is not already set, set the enviroment variable.
-    os.environ.setdefault(var, path)
+os.environ.setdefault('JPD_SESSION', '1')
+if options.use_system:
+    os.environ.setdefault('JPD_SYSTEM', '1')
 
 from jolicloud_pkg_daemon.main import start
 

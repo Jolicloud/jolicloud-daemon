@@ -1,19 +1,36 @@
 from zope.interface import implements
 from twisted.plugin import IPlugin
 
-from jolidaemon.ijolidaemon import IManager
+from jolidaemon.ijolidaemon import ISessionManager, ISystemManager
 
-class BaseManager(object):
-    """
-    Base class for all daemon plugins
-    """
-    implements(IPlugin, IManager)
 
-class LinuxBaseManager(BaseManager):
+class SystemManager(object):
+    """
+    Base class for all system plugins
+    """
+    implements(IPlugin, ISystemManager)
+
+class LinuxSystemManager(SystemManager):
     pass
 
-class MacOSXBaseManager(BaseManager):
+class MacOSXSystemnManager(SystemManager):
     pass
 
-class WindowsBaseManager(BaseManager):
+class WindowsSystemManager(SystemManager):
+    pass
+
+
+class SessionManager(object):
+    """
+    Base class for all session plugins
+    """
+    implements(IPlugin, ISessionManager)
+
+class LinuxSessionManager(SessionManager):
+    pass
+
+class MacOSXSessionManager(SessionManager):
+    pass
+
+class WindowsSessionManager(SessionManager):
     pass

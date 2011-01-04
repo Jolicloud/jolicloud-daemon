@@ -10,10 +10,8 @@ from functools import partial
 from twisted.python import log
 from twisted.internet import reactor, protocol
 
-from jolicloud_pkg_daemon.plugins import LinuxBaseManager
+from jolicloud_pkg_daemon.plugins import LinuxSessionManager
 from jolicloud_pkg_daemon.enums import *
-
-AUTO_UPDATE_INTERVAL = 600 # Time in seconds
 
 class Transaction():
     
@@ -162,7 +160,7 @@ class Transaction():
         for sig in self.sigs:
             sig.remove()
 
-class PackagesManager(LinuxBaseManager):
+class PackagesManager(LinuxSessionManager):
     _auto_updating = False
     _transactions = {}
     
@@ -200,23 +198,29 @@ class PackagesManager(LinuxBaseManager):
             rc_transaction = Transaction(None, None)
             def rc_finished(exit, runtime):
                 if exit == 'success':
-                    gu_result = []
-                    def gu_get_package(i, p_id, summary):
-                        gu_result.append(str(p_id))
+                    gu_result = {}
+                    def gu_get_package(info, package_id, summary):
+                        gu_result[str(package_id)] = {
+                            'name': str(package_id).split(';')[0],
+                            'summary': str(summary),
+                            'info': str(info),
+                            'ver': str(package_id).split(';')[1]
+                            # TODO: Size
+                        }
                     def gu_finished(exit, runtime):
                         if exit == 'success':
                             if not len(gu_result):
                                 self._auto_updating = False
-                                handler.send_data(request, {'updates_ready': False})
+                                handler.send_data(request, {'updates': []})
                                 return log.msg('Nothing to Autoupdate')
                             dp_transaction = Transaction(None, None)
                             def dp_finished(exit, runtime):
-                                handler.send_data(request, {'updates_ready': True})
+                                handler.send_data(request, {'updates': gu_result.values()})
                                 log.msg('Autoupdate finished')
                                 self._auto_updating = False
                             dp_transaction._s_Finished = dp_finished
                             dp_transaction._s_Changed = None
-                            dp_transaction.run('DownloadPackages', gu_result)
+                            dp_transaction.run('DownloadPackages', gu_result.keys())
                         else:
                             log.msg('Autoupdate aborted')
                             self._auto_updating = False
@@ -240,7 +244,7 @@ class PackagesManager(LinuxBaseManager):
                     rc_transaction.run('RefreshCache', True)
             else:
                 log.msg('No internet connection, not starting the autoupdate')
-        reactor.callLater(AUTO_UPDATE_INTERVAL, partial(self._auto_update, request, handler))
+        reactor.callLater(self.update_time_interval, partial(self._auto_update, request, handler))
     
     def _install_remove(self, method, request, handler, package):
         result = []
@@ -360,9 +364,11 @@ class PackagesManager(LinuxBaseManager):
         t = Transaction(request, handler)
         t.run('UpdateSystem', False)
 
-    def event_register(self, request, handler, event):
+    def event_register(self, request, handler, event, **kwargs):
         if event == 'packages/auto_update':
-            reactor.callLater(AUTO_UPDATE_INTERVAL, partial(self._auto_update, request, handler))
+            delay = kwargs.get('delay', 300)
+            self.update_time_interval = kwargs.get('interval', 300)
+            reactor.callLater(delay, partial(self._auto_update, request, handler))
 
 packagesManager = PackagesManager()
 

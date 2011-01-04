@@ -38,6 +38,7 @@ from jolicloud_pkg_daemon.websocket import WebSocketRequest, WebSocketHandler, W
 from jolicloud_pkg_daemon.jolidaemon import ijolidaemon
 from jolicloud_pkg_daemon.enums import *
 from jolicloud_pkg_daemon import managers
+from jolicloud_pkg_daemon.plugins import SystemManager, SessionManager
 
 TRUSTED_URI = (
     # re.compile(".*"),
@@ -143,7 +144,11 @@ class JolicloudWSHandler(WebSocketHandler):
             method_name = 'event_register'
         plugin_name = '%sManager' % manager_name.capitalize()
         plugin_found = False
-        for plugin in getPlugins(ijolidaemon.IManager, managers):
+        if os.environ.get('JPD_SYSTEM', '0') == '1':
+            plugins = getPlugins(ijolidaemon.ISystemManager, managers)
+        else:
+            plugins = getPlugins(ijolidaemon.ISessionManager, managers)
+        for plugin in plugins:
             if plugin_name == plugin.__class__.__name__:
                 plugin_found = True
                 if hasattr(plugin, '%s_' % method_name):
@@ -187,8 +192,16 @@ def start():
         reactor.listenTCP(8005, site, interface='127.0.0.1')
     
     # We load the plugins:
-    log.msg('We load the plugins')
-    for plugin in getPlugins(ijolidaemon.IManager, managers):
+    if os.environ.get('JPD_SYSTEM', '0') == '1':
+        if os.getuid():
+            log.msg('You must be root to run this daemon in system mode.')
+            exit()
+        log.msg('We load the system plugins.')
+        plugins = getPlugins(ijolidaemon.ISystemManager, managers)
+    else:
+        log.msg('We load the session plugins.')
+        plugins = getPlugins(ijolidaemon.ISessionManager, managers)
+    for plugin in plugins:
         print plugin.__class__.__name__
     
     reactor.run()

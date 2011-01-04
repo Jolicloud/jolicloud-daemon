@@ -1,6 +1,7 @@
 from zope.interface import Interface
 
-class IManager(Interface):
+class ISessionManager(Interface):
     pass
 
-
+class ISystemManager(Interface):
+    pass
