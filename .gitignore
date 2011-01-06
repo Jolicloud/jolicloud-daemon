@@ -7,3 +7,4 @@
 /debian/jolicloud-pkg-daemon.debhelper.log
 /build
 /dist
+.idea

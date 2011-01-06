@@ -29,8 +29,7 @@ except ImportError:
 from twisted.internet import reactor
 from twisted.python import log
 from twisted.internet.protocol import Protocol, Factory
-from twisted.web import resource
-from twisted.web.static import File
+from twisted.web import resource, static, twcgi
 from twisted.web.server import Request
 from twisted.plugin import getPlugins
 
@@ -84,10 +83,9 @@ class JolicloudWSSite(WebSocketSite):
     requestFactory = JolicloudWSRequest
 
 class JolicloudWSHandler(WebSocketHandler):
-
-    def __init__(self, transport, factory):
-        WebSocketHandler.__init__(self, transport, factory)
-
+    
+    manager_interface = None
+    
     # THIS SUCKS.
     def send_meta(self, type, request=None, message=None):
         response = type
@@ -95,14 +93,14 @@ class JolicloudWSHandler(WebSocketHandler):
             response['method'] = request.meta_handler
         if message:
             response['params']['message'] += " %s" % message
-        self.transport.write(json.dumps(response))
+        self.transport.write('\n' + json.dumps(response) + '\n')
         
     def send_data(self, request, params):
         response = {
             'params' : params,
             'method' : request.handler
         }
-        self.transport.write(json.dumps(response))
+        self.transport.write('\n' + json.dumps(response) + '\n')
         
     def success(self, request):
         self.send_meta(OPERATION_SUCCESSFUL, request)
@@ -145,10 +143,10 @@ class JolicloudWSHandler(WebSocketHandler):
         plugin_name = '%sManager' % manager_name.capitalize()
         plugin_found = False
         if os.environ.get('JPD_SYSTEM', '0') == '1':
-            plugins = getPlugins(ijolidaemon.ISystemManager, managers)
+            self.manager_interface = ijolidaemon.ISystemManager
         else:
-            plugins = getPlugins(ijolidaemon.ISessionManager, managers)
-        for plugin in plugins:
+            self.manager_interface = ijolidaemon.ISessionManager
+        for plugin in getPlugins(self.manager_interface, managers):
             if plugin_name == plugin.__class__.__name__:
                 plugin_found = True
                 if hasattr(plugin, '%s_' % method_name):
@@ -165,10 +163,13 @@ class JolicloudWSHandler(WebSocketHandler):
                             method_name,
                             request.params if hasattr(request, 'params') else ''
                         ))
-                        getattr(plugin, method_name)(request, self, **kwargs)
+                        ret = getattr(plugin, method_name)(request, self, **kwargs)
+                        if ret is not None:
+                            self.send_data(request, ret)
+                            self.success(request)
                     except Exception, e:
                         log.err(e)
-                        self.send_meta(OPERATION_FAILED, request)
+                        self.failed(request)
                 else:
                     self.send_meta(NOT_IMPLEMENTED, request)
                 break
@@ -182,14 +183,23 @@ def start():
     log.startLogging(sys.stdout)
     
     # Websocket server
-    kwargs = { 'resource': File(os.environ['JPD_HTDOCS_PATH']) }
-    site = JolicloudWSSite(**kwargs)
+    #kwargs = { 'resource': File(os.environ['JPD_HTDOCS_PATH']) }
+    #site = JolicloudWSSite(**kwargs)
+    
+    root = static.File(os.environ['JPD_HTDOCS_PATH'])
+    root.putChild("cgi-bin", twcgi.CGIDirectory(os.environ['JPD_HTDOCS_PATH'] + '/cgi-bin'))
+    site = JolicloudWSSite(root)
+    
     site.addHandler('/jolicloud/', JolicloudWSHandler)
     
+    
+    # http://twistedmatrix.com/documents/9.0.0/web/howto/using-twistedweb.html#auto5
     if os.environ.get('JPD_DEBUG', '0') == '1':
+        reactor.listenTCP(8004, site)
         reactor.listenTCP(8005, site)
     else:
         reactor.listenTCP(8005, site, interface='127.0.0.1')
+    # TODO, use random port for session daemon
     
     # We load the plugins:
     if os.environ.get('JPD_SYSTEM', '0') == '1':

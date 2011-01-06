@@ -101,10 +101,10 @@ class NetworkManager(LinuxSessionManager):
             o_ca = self.system_bus.get_object(self._NS, connection)
             if o_ca.Get(self._CONNECTION_ACTIVE_NS, 'Default') == 1:
                 for device in o_ca.Get(self._CONNECTION_ACTIVE_NS, 'Devices'):
-                   o_d = self.system_bus.get_object(self._NS, device)
-                   device_type = o_d.Get(self._DEVICE_NS, 'DeviceType')
-                   if device_type in (3, 4):
-                        return handler.send_data(request, True)
-        return handler.send_data(request, False)
+                    o_d = self.system_bus.get_object(self._NS, device)
+                    device_type = o_d.Get(self._DEVICE_NS, 'DeviceType')
+                    if device_type in (3, 4):
+                        return True
+        return False
 
 #networkManager = NetworkManager()

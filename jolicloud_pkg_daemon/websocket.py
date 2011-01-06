@@ -84,9 +84,6 @@ class WebSocketRequest(Request):
         handlerFactory = self.site.handlers.get(self.uri)
         if not handlerFactory:
             return finish()
-        transport = WebSocketTransport(self)
-        handler = handlerFactory(transport, self.channel.factory)
-        transport._attachHandler(handler)
 
         # key1 and key2 exist and are a string of characters
         # filter both keys to get a string with all numbers in order
@@ -120,6 +117,10 @@ class WebSocketRequest(Request):
         # get two resulting numbers, as specified in hixie-76
         num1 = num1 / numSpaces1
         num2 = num2 / numSpaces2
+
+        transport = WebSocketTransport(self)
+        handler = handlerFactory(transport)
+        transport._attachHandler(handler)
 
         self.channel.setRawMode()
 
@@ -161,13 +162,15 @@ class WebSocketRequest(Request):
             self.write("\r\n")
 
             # concatenate num1 (32 bit in), num2 (32 bit int), nonce, and take md5 of result
-            res = struct.pack('>ii8s', num1, num2, nonce)
+            res = struct.pack('>II8s', num1, num2, nonce)
             server_response = md5(res).digest()
             self.write(server_response)
 
             # XXX we probably don't want to set _transferDecoder
             self.channel._transferDecoder = WebSocketFrameDecoder(
                 self, handler)
+
+            transport._connectionMade()
 
         # we need the nonce from the request body
         self.channel._transferDecoder = _IdentityTransferDecoder(0, lambda _ : None, finishHandshake)
@@ -197,7 +200,7 @@ class WebSocketRequest(Request):
         if not handlerFactory:
             return finish()
         transport = WebSocketTransport(self)
-        handler = handlerFactory(transport, self.channel.factory)
+        handler = handlerFactory(transport)
         transport._attachHandler(handler)
 
         protocolHeaders = self.requestHeaders.getRawHeaders(
@@ -255,6 +258,7 @@ class WebSocketRequest(Request):
             # XXX we probably don't want to set _transferDecoder
             self.channel._transferDecoder = WebSocketFrameDecoder(
                 self, handler)
+            transport._connectionMade()
             return
 
 
@@ -275,7 +279,6 @@ class WebSocketSite(Site):
         Site.__init__(self, resource, logPath, timeout)
         self.handlers = {}
         self.supportedProtocols = supportedProtocols or []
-
 
     def addHandler(self, name, handlerFactory):
         """
@@ -305,20 +308,26 @@ class WebSocketTransport(object):
         self._request = request
         self._request.notifyFinish().addErrback(self._connectionLost)
 
-
     def _attachHandler(self, handler):
         """
         Attach the given L{WebSocketHandler} to this transport.
         """
         self._handler = handler
 
+    def _connectionMade(self):
+        """
+        Called when a connection is made.
+        """
+        self._handler.connectionMade()
 
     def _connectionLost(self, reason):
         """
         Forward connection lost event to the L{WebSocketHandler}.
         """
         self._handler.connectionLost(reason)
-
+        del self._request.transport
+        del self._request
+        del self._handler
 
     def getPeer(self):
         """
@@ -329,6 +338,13 @@ class WebSocketTransport(object):
         return self._request.transport.getPeer()
 
     def getHost(self):
+        """
+        Similar to getPeer, but returns an address describing this side of the
+        connection.
+
+        @return: An L{IAddress} provider.
+        """
+
         return self._request.transport.getHost()
 
     def write(self, frame):
@@ -340,14 +356,20 @@ class WebSocketTransport(object):
         """
         self._request.write("\x00%s\xff" % frame)
 
+    def writeSequence(self, frames):
+        """
+        Send a sequence of frames to the connected client.
+        """
+        self._request.write("".join(["\x00%s\xff" % f for f in frame]))
 
     def loseConnection(self):
         """
         Close the connection.
         """
         self._request.transport.loseConnection()
-
-
+        del self._request.transport
+        del self._request
+        del self._handler
 
 class WebSocketHandler(object):
     """
@@ -359,12 +381,11 @@ class WebSocketHandler(object):
     @type: L{WebSocketTransport}
     """
 
-    def __init__(self, transport, factory):
+    def __init__(self, transport):
         """
         Create the handler, with the given transport
         """
         self.transport = transport
-        self.factory = factory
 
 
     def frameReceived(self, frame):
@@ -383,6 +404,11 @@ class WebSocketHandler(object):
         """
         self.transport.loseConnection()
 
+
+    def connectionMade(self):
+        """
+        Called when a connection is made.
+        """
 
     def connectionLost(self, reason):
         """
@@ -419,7 +445,6 @@ class WebSocketFrameDecoder(object):
         self.handler = handler
         self._data = []
         self._currentFrameLength = 0
-
 
     def dataReceived(self, data):
         """
@@ -460,5 +485,4 @@ class WebSocketFrameDecoder(object):
 
 
 
-___all__ = ["WebSocketHandler", "WebSocketSite"]
-
+__all__ = ["WebSocketHandler", "WebSocketSite"]

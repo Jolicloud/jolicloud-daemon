@@ -164,9 +164,6 @@ class PackagesManager(LinuxSessionManager):
     _auto_updating = False
     _transactions = {}
     
-    def __init__(self):
-        log.msg('================== INIT PackagesManager ==================')
-    
     def _on_cellular_network(self):
         """
         We check if the default connection use one of the following DeviceType:
