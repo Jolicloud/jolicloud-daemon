@@ -1,0 +1,20 @@
+[PackageKit Permissions]
+Identity=unix-group:admin
+Action=org.freedesktop.packagekit.*
+ResultAny=no
+ResultInactive=no
+ResultActive=yes
+
+[Autologin Permissions]
+Identity=unix-group:admin
+Action=org.jolicloud.autologin
+ResultAny=no
+ResultInactive=no
+ResultActive=yes
+
+[Autologin Permissions]
+Identity=unix-user:*
+Action=org.jolicloud.uuid
+ResultAny=no
+ResultInactive=no
+ResultActive=yes
