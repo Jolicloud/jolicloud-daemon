@@ -41,7 +41,6 @@ class NetworkManager(LinuxSessionManager):
     }
         
     def __init__(self):
-        log.msg('================== INIT NetworkManager ==================')
         self.system_bus = dbus.SystemBus()
         self._network_obj = self.system_bus.get_object(
             self._NS,
@@ -107,4 +106,4 @@ class NetworkManager(LinuxSessionManager):
                         return True
         return False
 
-#networkManager = NetworkManager()
+networkManager = NetworkManager()

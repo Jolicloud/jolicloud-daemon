@@ -38,8 +38,10 @@ parser.add_option(
 
 if options.use_local_dirs:
     os.environ.setdefault('JPD_HTDOCS_PATH', 'htdocs/')
+    os.environ.setdefault('JPD_ICONS_PATH', 'icons/')
 else:
     os.environ.setdefault('JPD_HTDOCS_PATH', '/usr/share/jolicloud-pkg-daemon/htdocs/')
+    os.environ.setdefault('JPD_ICONS_PATH', '/usr/share/jolicloud-pkg-daemon/icons/')
 
 if options.use_debug:
     os.environ.setdefault('JPD_DEBUG', '1')

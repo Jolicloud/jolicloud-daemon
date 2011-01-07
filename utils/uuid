@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+
+import os
+import uuid
+import random
+import string
+
+try:
+    f = open('/etc/jolicloud-daemon/computer', 'r')
+    contents = f.read()
+    f.close()
+
+    if contents:
+        contents = contents.split('\n')
+        if len(contents) == 2:
+            print '%s\n%s' % (contents[0].strip(), contents[1].strip())
+            exit()
+except IOError:
+    pass
+
+# Try to get the UUID from a legacy file
+existing_uuid = None
+try:
+    f = open('/etc/jolicloud-daemon/computer_uuid', 'r')
+    contents = f.read()
+    f.close()
+    os.unlink('/etc/jolicloud-daemon/computer_uuid')
+    existing_uuid = str(uuid.UUID(contents.strip())) # If it's not a valid UUID, it will raise a ValueError
+    if existing_uuid == 'db7cba67-68a5-4dd7-b167-9d15578cacb7': # The checked UUID is a broken one: same in many distributed ISOs 
+        existing_uuid = None
+except (IOError, ValueError):
+    existing_uuid = None
+
+# If the file /etc/jolicloud-daemon/computer does not exist yet.
+random.seed()
+if existing_uuid == None:
+    computer_uuid = str(uuid.uuid4())
+else:
+    computer_uuid = existing_uuid
+password = ''.join([random.choice(string.ascii_letters) for i in range(12)])
+
+if not os.path.exists('/etc/jolicloud-daemon'):
+    os.mkdir('/etc/jolicloud-daemon')
+f = open('/etc/jolicloud-daemon/computer', 'w+')
+f.write('%s\n%s' % (computer_uuid, password))
+f.close()
+
+print '%s\n%s' % (computer_uuid, password)

@@ -1,5 +1,6 @@
 import os
 
+from twisted.internet import reactor, protocol
 from twisted.internet.utils import getProcessValue
 from twisted.internet.defer import Deferred
 
@@ -30,17 +31,12 @@ class FoldersManager(LinuxSessionManager):
     def open_(self, request, handler, uri):
         if '~' in uri:
             uri = uri.replace('~', os.environ['HOME'])
-        d = getProcessValue(
-            '/usr/bin/thunar',
-            args=[uri],
+        reactor.spawnProcess(
+            protocol.ProcessProtocol(),
+            '/usr/bin/setsid', # setsid - run a program in a new session
+            ['setsid', 'nautilus', uri],
             env=os.environ
         )
-        def get_value(code):
-            if code == 0:
-                handler.send_meta(OPERATION_SUCCESSFUL, request=request)
-            else:
-                handler.send_meta(OPERATION_FAILED, request=request)
-        d.addCallback(get_value)
 
 foldersManager = FoldersManager()
 

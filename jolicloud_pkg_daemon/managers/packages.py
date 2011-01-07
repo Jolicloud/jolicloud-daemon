@@ -4,11 +4,13 @@ __author__ = 'Jeremy Bethmont'
 
 import os
 import dbus
+import shutil
 
 from functools import partial
 
 from twisted.python import log
 from twisted.internet import reactor, protocol
+from twisted.web.client import getPage
 
 from jolicloud_pkg_daemon.plugins import LinuxSessionManager
 from jolicloud_pkg_daemon.enums import *
@@ -268,10 +270,26 @@ class PackagesManager(LinuxSessionManager):
         t.run('Resolve', 'none', package)
         # apt-cache show `dpkg-query -W --showformat='${Package}=${Version}' gajim` | egrep '(Package|Version|Architecture|Filename)'
     
-    def install(self, request, handler, package):
+    def install(self, request, handler, package, icon_url=None):
+        if package.startswith('jolicloud-webapp-'):
+            path = '%s/.local/share/icons/%s.png' % (os.getenv('HOME'), package)
+            # We copy the default icon first, in case we can't download the real icon
+            shutil.copy('%sjolicloud-webapp-default.png' % os.environ['JPD_ICONS_PATH'], path)
+            def download_callback(result):
+                log.msg('Saving Icon ~/.local/share/icons/%s.png (Size: %d)' % (package, len(result)))
+                f = open(path, 'w')
+                f.write(result)
+                f.close()
+            getPage(str(icon_url), timeout=10).addCallback(download_callback)
+            return {'status': 'finished'}
         self._install_remove('InstallPackages', request, handler, package)
     
     def remove(self, request, handler, package):
+        if package.startswith('jolicloud-webapp-'):
+            path = '%s/.local/share/icons/%s.png' % (os.getenv('HOME'), package)
+            if os.path.exists(path):
+                os.unlink(path)
+            return {'status': 'finished'}
         if package == 'nickel-codecs-ffmpeg-nonfree':
             return self._install_remove('InstallPackages', request, handler, 'nickel-codecs-ffmpeg')
         self._install_remove('RemovePackages', request, handler, package)
@@ -322,6 +340,10 @@ class PackagesManager(LinuxSessionManager):
                         p, status = p.split(':')
                         if status.startswith('install'):
                             res.append({'name': p})
+                # We add webapps
+                for icon in os.listdir('%s/.local/share/icons' % os.getenv('HOME')):
+                    if icon.startswith('jolicloud-webapp-'):
+                        res.append({'name': icon.split('.')[0]})
                 handler.send_data(request, res)
                 handler.send_meta(OPERATION_SUCCESSFUL, request=request)
                 log.msg("[DpkgGetSelecions] [processEnded] status = %d" % status_object.value.exitCode)
