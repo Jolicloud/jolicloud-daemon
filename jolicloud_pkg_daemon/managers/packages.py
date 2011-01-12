@@ -163,8 +163,11 @@ class Transaction():
             sig.remove()
 
 class PackagesManager(LinuxSessionManager):
-    _auto_updating = False
+    _prefetching = False
+    _prefetch_activated = False
     _transactions = {}
+    
+    events = ['updates_ready']
     
     def _on_cellular_network(self):
         """
@@ -190,8 +193,10 @@ class PackagesManager(LinuxSessionManager):
                         return True
         return False
     
-    def _auto_update(self, request, handler):
-        if self._auto_updating == True:
+    def _prefetch(self):
+        if self._prefetch_activated == False:
+            return
+        if self._prefetching == True:
             log.msg('Another auto update is in progress, cancelling this attempt')
         else:
             rc_transaction = Transaction(None, None)
@@ -209,27 +214,27 @@ class PackagesManager(LinuxSessionManager):
                     def gu_finished(exit, runtime):
                         if exit == 'success':
                             if not len(gu_result):
-                                self._auto_updating = False
-                                handler.send_data(request, {'updates': []})
+                                self._prefetching = False
+                                self.emit('updates_ready', {'updates': []})
                                 return log.msg('Nothing to Autoupdate')
                             dp_transaction = Transaction(None, None)
                             def dp_finished(exit, runtime):
-                                handler.send_data(request, {'updates': gu_result.values()})
+                                self.emit('updates_ready', {'updates': gu_result.values()})
                                 log.msg('Autoupdate finished')
-                                self._auto_updating = False
+                                self._prefetching = False
                             dp_transaction._s_Finished = dp_finished
                             dp_transaction._s_Changed = None
                             dp_transaction.run('DownloadPackages', gu_result.keys())
                         else:
                             log.msg('Autoupdate aborted')
-                            self._auto_updating = False
+                            self._prefetching = False
                     gu_transaction = Transaction(None, None)
                     gu_transaction._s_Package = gu_get_package
                     gu_transaction._s_Finished = gu_finished
                     gu_transaction._s_Changed = None
                     gu_transaction.run('GetUpdates', 'installed')
                 else:
-                    self._auto_updating = False
+                    self._prefetching = False
                     log.msg('Autoupdate aborted')
             rc_transaction._s_Finished = rc_finished
             rc_transaction._s_Changed = None
@@ -238,12 +243,12 @@ class PackagesManager(LinuxSessionManager):
                 if self._on_cellular_network():
                     log.msg('On cellular network, not starting the autoupdate')
                 else:
-                    self._auto_updating = True
+                    self._prefetching = True
                     log.msg('Sarting an autoupdate')
                     rc_transaction.run('RefreshCache', True)
             else:
                 log.msg('No internet connection, not starting the autoupdate')
-        reactor.callLater(self.update_time_interval, partial(self._auto_update, request, handler))
+        reactor.callLater(self._prefetch_interval, self._prefetch)
     
     def _install_remove(self, method, request, handler, package):
         result = []
@@ -258,7 +263,7 @@ class PackagesManager(LinuxSessionManager):
                     t.run(method, result, False, True)
             else:
                 return handler.send_meta(OPERATION_FAILED, request=request)
-
+        
         t = Transaction(request, handler)
         t._s_Package = resolve_package
         t._s_Finished = resolve_finished
@@ -269,6 +274,22 @@ class PackagesManager(LinuxSessionManager):
             package = [package]
         t.run('Resolve', 'none', package)
         # apt-cache show `dpkg-query -W --showformat='${Package}=${Version}' gajim` | egrep '(Package|Version|Architecture|Filename)'
+    
+    def _silent_remove(self, packages):
+        result = []
+        def resolve_package(i, p_id, summary):
+            result.append(str(p_id))
+        def resolve_finished(exit, runtime):
+            if exit == 'success' and len(result):
+                t = Transaction(None, None)
+                t._s_Finished = None
+                t._s_Changed = None
+                t.run(RemovePackages, result, False, True)
+        t = Transaction(None, None)
+        t._s_Package = resolve_package
+        t._s_Finished = resolve_finished
+        t._s_Changed = None
+        t.run('Resolve', 'none', packages)
     
     def install(self, request, handler, package, icon_url=None):
         if package.startswith('jolicloud-webapp-'):
@@ -323,6 +344,7 @@ class PackagesManager(LinuxSessionManager):
         #        t._s_Package = get_package
         #        t._s_Finished = finished
         #        t.run('GetPackages', 'installed')
+        _silent_remove = self._silent_remove
         class DpkgGetSelecions(protocol.ProcessProtocol):
             out = ''
             
@@ -334,13 +356,25 @@ class PackagesManager(LinuxSessionManager):
             
             def processEnded(self, status_object):
                 res = []
+                webapps_to_be_deleted = []
                 for p in self.out.split('\n'):
                     p = p.strip()
                     if len(p):
                         p, status = p.split(':')
                         if status.startswith('install'):
-                            res.append({'name': p})
-                # We add webapps
+                            if p.startswith('jolicloud-webapp-'):
+                                webapps_to_be_deleted.append(p)
+                            else:
+                                res.append({'name': p})
+                # We add webapps and remove the legacy packages
+                if len(webapps_to_be_deleted):
+                    log.msg('Deleting legacy webapps packages: %s' % webapps_to_be_deleted)
+                    for webapp in webapps_to_be_deleted:
+                        src = '/usr/share/pixmaps/%s.png' % webapp
+                        dst = '%s/.local/share/icons/%s.png' % (os.getenv('HOME'), webapp)
+                        log.msg('Copying icon %s to %s.' % (src, dst))
+                        shutil.copy(src, dst)
+                    _silent_remove(webapps_to_be_deleted)
                 for icon in os.listdir('%s/.local/share/icons' % os.getenv('HOME')):
                     if icon.startswith('jolicloud-webapp-'):
                         res.append({'name': icon.split('.')[0]})
@@ -382,12 +416,18 @@ class PackagesManager(LinuxSessionManager):
     def perform_updates(self, request, handler):
         t = Transaction(request, handler)
         t.run('UpdateSystem', False)
-
-    def event_register(self, request, handler, event, **kwargs):
-        if event == 'packages/auto_update':
-            delay = kwargs.get('delay', 300)
-            self.update_time_interval = kwargs.get('interval', 300)
-            reactor.callLater(delay, partial(self._auto_update, request, handler))
+    
+    def start_prefetch(self, request, handler, delay=300, interval=300):
+        if self._prefetch_activated == False:
+            self._prefetch_activated = True
+            self._prefetch_interval = interval
+            reactor.callLater(delay, self._prefetch)
+        handler.success(request)
+    
+    def stop_prefetch(self, request, handler):
+        if self._prefetch_activated == True:
+            self._prefetch_activated = False
+        handler.success(request)
 
 packagesManager = PackagesManager()
 
