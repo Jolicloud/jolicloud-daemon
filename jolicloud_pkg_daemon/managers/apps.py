@@ -34,6 +34,7 @@ class AppsManager(LinuxSessionManager):
             ['setsid'] + splited_command,
             env=os.environ
         )
+        handler.success(request)
     
     def launch_webapp(self, request, handler, package, url, icon_url):
         def download_callback(result):
@@ -81,5 +82,6 @@ class AppsManager(LinuxSessionManager):
                             desktops[desktop]['package'] = package
                 handler.send_data(request, desktops.values())
         reactor.spawnProcess(DpkgOut(), '/usr/bin/dpkg', ['dpkg', '-S'] + desktops.keys())
+        handler.success(request)
 
 appsManager = AppsManager()

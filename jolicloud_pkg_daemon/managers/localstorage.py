@@ -19,6 +19,8 @@ class Local_storageManager(LinuxSessionManager):
     _SELECT = 'SELECT value FROM storage WHERE key=? LIMIT 1'
     _INSERT = 'INSERT OR REPLACE INTO storage VALUES (?, ?)'
     
+    _table_ready = False
+    
     def __init__(self):
         try:
             import xdg.BaseDirectory
@@ -27,28 +29,34 @@ class Local_storageManager(LinuxSessionManager):
             self.path = os.path.join(os.getenv('HOME'), '.config', 'Jolicloud', 'jolicloud-daemon', 'localstorage.db')
         log.msg('Using DB path %s' % self.path)
         self.dbpool = adbapi.ConnectionPool('sqlite3', self.path, check_same_thread=False)
+        def get_success(result):
+            self._table_ready = True
+        def get_error():
+            self._table_ready = False
+        self.dbpool.runInteraction(self._create_table_and_index).addCallbacks(get_success, get_error)
     
-    # First implementation using threaded transactions (dbpool.runInteraction)
-    def _get_item(self, txn, key):
+    def _create_table_and_index(self, txn):
         txn.execute(self._CREATE_TABLE)
         txn.execute(self._CREATE_INDEX)
-        result = txn.execute(self._SELECT, (key,)).fetchone()
-        return result[0] if result else ''
-    
-    def _set_item(self, txn, key, value):
-        txn.execute(self._CREATE_TABLE)
-        txn.execute(self._CREATE_INDEX)
-        txn.execute(self._INSERT, (key, value))
     
     def get_item(self, request, handler, key):
+        if self._table_ready == False:
+            return handler.failed(request)
         def get_result(result):
-            handler.send_data(request, result)
-        self.dbpool.runInteraction(self._get_item, key).addCallback(get_result)
+            handler.send_data(request, result[0][0] if result else '')
+            handler.success(request)
+        def get_error():
+            handler.failed(request)
+        self.dbpool.runQuery(self._SELECT, (key,)).addCallbacks(get_result, get_error)
 
     def set_item(self, request, handler, key, value):
-        def get_result(result):
+        if self._table_ready == False:
+            return handler.failed(request)
+        def get_success(result):
             handler.success(request)
-        self.dbpool.runInteraction(self._set_item, key, value).addCallback(get_result)
+        def get_error():
+            handler.failed(request)
+        self.dbpool.runQuery(self._INSERT, (key, value)).addCallbacks(get_success, get_error)
 
 #    # Second implementation, using deffered
 #    def _create_table(self):

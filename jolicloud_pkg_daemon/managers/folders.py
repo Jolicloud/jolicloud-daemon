@@ -37,6 +37,7 @@ class FoldersManager(LinuxSessionManager):
             ['setsid', 'nautilus', uri],
             env=os.environ
         )
+        handler.success(request)
 
 foldersManager = FoldersManager()
 

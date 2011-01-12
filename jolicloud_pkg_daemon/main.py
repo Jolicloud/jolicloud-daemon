@@ -139,7 +139,6 @@ class JolicloudWSHandler(WebSocketHandler):
         # XXX: Find a better way to route the events request to the corresponding manager
         if manager_name == 'events':
             manager_name = request.params['event'].split('/')[0]
-            method_name = 'event_register'
         plugin_name = '%sManager' % manager_name.capitalize()
         plugin_found = False
         if os.environ.get('JPD_SYSTEM', '0') == '1':

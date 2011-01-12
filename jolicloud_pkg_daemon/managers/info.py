@@ -3,6 +3,7 @@
 __author__ = 'Jeremy Bethmont'
 
 import os
+import grp
 
 from twisted.python import log
 from twisted.plugin import getPlugins
@@ -21,7 +22,9 @@ class InfoManager(LinuxSessionManager):
                 'size' : disk.f_bsize * disk.f_blocks,
                 'size_free' : disk.f_bsize * disk.f_bavail,
                 'mount_point' : mount_point
-            }
+            },
+            # TODO: guest
+            'guest': grp.getgrgid(os.getgroups()[0]).gr_name
         }
     
     def introspection(self, request, handler):

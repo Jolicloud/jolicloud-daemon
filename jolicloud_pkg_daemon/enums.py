@@ -6,6 +6,14 @@ NOT_IMPLEMENTED =  {
     }
 }
 
+UNKNOWN_EVENT =  {
+    'params': {
+        'code':    554,
+        'message': 'Unknown event.',
+        'type':    'status'
+    }
+}
+
 SYNTAX_ERROR = {
     'params': {
         'code':    501,

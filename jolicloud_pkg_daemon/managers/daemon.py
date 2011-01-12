@@ -61,10 +61,14 @@ class DaemonManager(LinuxSessionManager):
                 except ValueError:
                     pass
                 handler.send_data(request, retval)
+                handler.success(request)
         reactor.spawnProcess(
             GetProcessOutput(),
             '/usr/bin/pkexec',
             ['pkexec', '/usr/lib/jolicloud-pkg-daemon/utils/uuid']
         )
+
+    def kill_nickel(self, request, handler):
+        handler.success(request)
 
 daemonManager = DaemonManager()

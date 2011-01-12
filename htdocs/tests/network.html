@@ -1,0 +1,66 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <script src="http://code.jquery.com/jquery-latest.js"></script>
+  <link rel="stylesheet" href="http://github.com/jquery/qunit/raw/master/qunit/qunit.css" type="text/css" media="screen" />
+  <script type="text/javascript" src="http://github.com/jquery/qunit/raw/master/qunit/qunit.js"></script>
+
+  <script>
+    
+    var handlers = {};
+    
+    function tests(ws) {
+      
+      module("network");
+      
+      test("on_cellular_network", 3, function() {
+        console.debug('STOP launch');
+        stop(10000);
+        handlers['m_network_on_cellular_network'] = function(data) {
+          if (data['params']['code'] == 150) {
+            ok(true, 'We expect to receive a 150: Operation in progress.');
+          } else if (data['params']['code'] == 200) {
+            ok(true, 'We expect to receive a 200: Operation successful.');
+            console.debug('START launch');
+            start();
+          } else if (data['params']['code'] >= 500) {
+            ok(false, 'We don\'t expect to receive ' + data['params']['code'] + ' ' + data['params']['message']);
+            start();
+          }
+        };
+        handlers['network_on_cellular_network'] = function(data) {
+          if (typeof data['params'] == 'boolean') {
+            ok(true, 'We expect a boolean.');
+          }
+        };
+        ws.send('{"method":"network/on_cellular_network","handler":"network_on_cellular_network","meta_handler":"m_network_on_cellular_network"}');
+      });
+      
+    }
+    
+    $(document).ready(function(){
+      var ws = new WebSocket('ws://localhost:8004/jolicloud/');
+      ws.onmessage = function(e) {
+        eval('var data = ' + e.data);
+        for (handler in handlers) {
+          if (typeof data['method'] != 'undefined' && typeof handlers[data['method']] != 'undefined') {
+            console.debug('Calling ' + data['method'] + ' ' + e.data);
+            return handlers[data['method']](data);
+          }
+        }
+      }
+      ws.onopen = function() {
+        tests(ws);
+      }
+    });
+  </script>
+</head>
+<body>
+  <h1 id="qunit-header">Jolicloud Daemon tests</h1>
+  <h2 id="qunit-banner"></h2>
+  <div id="qunit-testrunner-toolbar"></div>
+  <h2 id="qunit-userAgent"></h2>
+  <ol id="qunit-tests"></ol>
+  <div id="qunit-fixture">test markup, will be hidden</div>
+</body>
+</html>
