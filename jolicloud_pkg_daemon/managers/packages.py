@@ -284,7 +284,7 @@ class PackagesManager(LinuxSessionManager):
                 t = Transaction(None, None)
                 t._s_Finished = None
                 t._s_Changed = None
-                t.run(RemovePackages, result, False, True)
+                t.run('RemovePackages', result, False, True)
         t = Transaction(None, None)
         t._s_Package = resolve_package
         t._s_Finished = resolve_finished
