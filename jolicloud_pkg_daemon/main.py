@@ -195,9 +195,8 @@ def start():
     # http://twistedmatrix.com/documents/9.0.0/web/howto/using-twistedweb.html#auto5
     if os.environ.get('JPD_DEBUG', '0') == '1':
         reactor.listenTCP(8004, site)
-        reactor.listenTCP(8005, site)
     else:
-        reactor.listenTCP(8005, site, interface='127.0.0.1')
+        reactor.listenTCP(8004, site, interface='127.0.0.1')
     # TODO, use random port for session daemon
     
     # We load the plugins:
