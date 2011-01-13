@@ -30,7 +30,7 @@ class DaemonManager(LinuxSessionManager):
         return is_live
     
     def version(self, request, handler):
-        return '1.1.99'
+        return '1.1.20'
     
     def computer(self, request, handler):
         # Returns uuid, password and oem

@@ -43,7 +43,7 @@ class AppsManager(LinuxSessionManager):
             f.write(result)
             f.close()
         getPage(str(icon_url), timeout=10).addCallback(download_callback)
-        self.launch(request, handler, 'jolicloud-webapps-engine -app %s -icon-id %s' % (str(url), str(package)))
+        self.launch(request, handler, 'jolicloud-webapps-engine --app=%s --icon-id=%s' % (str(url), str(package)))
     
     def launch_desktop(self, request, handler, desktop):
         entry = DesktopEntry()

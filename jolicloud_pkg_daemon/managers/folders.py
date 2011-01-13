@@ -34,7 +34,7 @@ class FoldersManager(LinuxSessionManager):
         reactor.spawnProcess(
             protocol.ProcessProtocol(),
             '/usr/bin/setsid', # setsid - run a program in a new session
-            ['setsid', 'nautilus', uri],
+            ['setsid', 'nautilus', str(uri)],
             env=os.environ
         )
         handler.success(request)
