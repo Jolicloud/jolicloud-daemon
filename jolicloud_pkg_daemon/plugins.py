@@ -36,8 +36,11 @@ class Manager(object):
     
     def emit(self, event, data):
         if event in self._events:
-            for i in self._events[event]:
-                self._events[event][i]['handler'].send_data(self._events[event][i]['request'], data)
+            for handler_name in self._events[event]:
+                try:
+                    self._events[event][handler_name]['handler'].send_data(self._events[event][handler_name]['request'], data)
+                except AttributeError:
+                    del self._events[event_name][handler_name]
         else:
             return False
 
