@@ -215,11 +215,11 @@ class PackagesManager(LinuxSessionManager):
                         if exit == 'success':
                             if not len(gu_result):
                                 self._prefetching = False
-                                self.emit('updates_ready', {'updates': []})
+                                self.emit('updates_ready', [])
                                 return log.msg('Nothing to Autoupdate')
                             dp_transaction = Transaction(None, None)
                             def dp_finished(exit, runtime):
-                                self.emit('updates_ready', {'updates': gu_result.values()})
+                                self.emit('updates_ready', gu_result.values())
                                 log.msg('Autoupdate finished')
                                 self._prefetching = False
                             dp_transaction._s_Finished = dp_finished
