@@ -86,6 +86,21 @@ class JolicloudWSHandler(WebSocketHandler):
     
     manager_interface = None
     
+    rewrite = {
+        'apps/install': 'packages/install',
+        'apps/remove': 'packages/remove',
+        
+        'session/shutdown': 'power/shutdown',
+        'session/restart': 'power/restart',
+        'session/hibernate': 'power/hibernate',
+        'session/sleep': 'power/sleep',
+        'session/on_battery': 'power/on_battery',
+    }
+    
+    events_rewrite = {
+        'session/changed': 'power/changed',
+    }
+    
     # THIS SUCKS.
     def send_meta(self, type, request=None, message=None):
         response = type
@@ -121,11 +136,12 @@ class JolicloudWSHandler(WebSocketHandler):
             if not hasattr(request, handler):
                 self.send_meta(SYNTAX_ERROR, request, "Request is missing %s" % handler)
                 return
+        
+        # Rewrite
+        if request.method in self.rewrite.keys():
+            request.method = self.rewrite[request.method]
+        
         # Try and parse the request namespace/method
-        if request.method == 'apps/install':
-            request.method = 'packages/install'
-        if request.method == 'apps/remove':
-            request.method = 'packages/remove'
         try:
             (manager_name, method_name) = request.method.split('/')
             if not (manager_name and method_name): raise ValueError
@@ -138,6 +154,9 @@ class JolicloudWSHandler(WebSocketHandler):
             return
         # XXX: Find a better way to route the events request to the corresponding manager
         if manager_name == 'events':
+            # Events rewrite
+            if request.params['event'] in self.events_rewrite.keys():
+                request.params['event'] = self.events_rewrite[request.params['event']]
             manager_name = request.params['event'].split('/')[0]
         plugin_name = '%sManager' % manager_name.capitalize()
         plugin_found = False
