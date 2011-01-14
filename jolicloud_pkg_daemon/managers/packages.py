@@ -167,6 +167,8 @@ class PackagesManager(LinuxSessionManager):
     _prefetch_activated = False
     _transactions = {}
     
+    _refresh_cache_needed = False
+    
     events = ['updates_ready']
     
     def _on_cellular_network(self):
@@ -197,57 +199,53 @@ class PackagesManager(LinuxSessionManager):
         if self._prefetch_activated == False:
             return
         if self._prefetching == True:
-            log.msg('Another auto update is in progress, cancelling this attempt')
+            log.msg('Another prefetch is in progress, cancelling this attempt')
         else:
             rc_transaction = Transaction(None, None)
             def rc_finished(exit, runtime):
-                if exit == 'success':
-                    gu_result = {}
-                    def gu_get_package(info, package_id, summary):
-                        gu_result[str(package_id)] = {
-                            'name': str(package_id).split(';')[0],
-                            'summary': str(summary),
-                            'info': str(info),
-                            'ver': str(package_id).split(';')[1]
-                            # TODO: Size
-                        }
-                    def gu_finished(exit, runtime):
-                        if exit == 'success':
-                            if not len(gu_result):
-                                self._prefetching = False
-                                self.emit('updates_ready', [])
-                                return log.msg('Nothing to Autoupdate')
-                            dp_transaction = Transaction(None, None)
-                            def dp_finished(exit, runtime):
-                                self.emit('updates_ready', gu_result.values())
-                                log.msg('Autoupdate finished')
-                                self._prefetching = False
-                            dp_transaction._s_Finished = dp_finished
-                            dp_transaction._s_Changed = None
-                            dp_transaction.run('DownloadPackages', gu_result.keys())
-                        else:
-                            log.msg('Autoupdate aborted')
+                gu_result = {}
+                def gu_get_package(info, package_id, summary):
+                    gu_result[str(package_id)] = {
+                        'name': str(package_id).split(';')[0],
+                        'summary': str(summary),
+                        'info': str(info),
+                        'ver': str(package_id).split(';')[1]
+                        # TODO: Size
+                    }
+                def gu_finished(exit, runtime):
+                    if exit == 'success':
+                        if not len(gu_result):
                             self._prefetching = False
-                    gu_transaction = Transaction(None, None)
-                    gu_transaction._s_Package = gu_get_package
-                    gu_transaction._s_Finished = gu_finished
-                    gu_transaction._s_Changed = None
-                    gu_transaction.run('GetUpdates', 'installed')
-                else:
-                    self._prefetching = False
-                    log.msg('Autoupdate aborted')
+                            self.emit('updates_ready', [])
+                            return log.msg('Nothing to prefetch')
+                        dp_transaction = Transaction(None, None)
+                        def dp_finished(exit, runtime):
+                            self.emit('updates_ready', gu_result.values())
+                            log.msg('Prefetch finished')
+                            self._prefetching = False
+                        dp_transaction._s_Finished = dp_finished
+                        dp_transaction._s_Changed = None
+                        dp_transaction.run('DownloadPackages', gu_result.keys())
+                    else:
+                        log.msg('Prefetch aborted')
+                        self._prefetching = False
+                gu_transaction = Transaction(None, None)
+                gu_transaction._s_Package = gu_get_package
+                gu_transaction._s_Finished = gu_finished
+                gu_transaction._s_Changed = None
+                gu_transaction.run('GetUpdates', 'installed')
             rc_transaction._s_Finished = rc_finished
             rc_transaction._s_Changed = None
             network_state = rc_transaction.get_property('NetworkState')
             if network_state != 'offline':
                 if self._on_cellular_network():
-                    log.msg('On cellular network, not starting the autoupdate')
+                    log.msg('On cellular network, not starting the prefetch')
                 else:
                     self._prefetching = True
-                    log.msg('Sarting an autoupdate')
+                    log.msg('Sarting a prefetch')
                     rc_transaction.run('RefreshCache', True)
             else:
-                log.msg('No internet connection, not starting the autoupdate')
+                log.msg('No internet connection, not starting the prefetch')
         reactor.callLater(self._prefetch_interval, self._prefetch)
     
     def _install_remove(self, method, request, handler, package):
@@ -303,6 +301,9 @@ class PackagesManager(LinuxSessionManager):
                 f.close()
             getPage(str(icon_url), timeout=10).addCallback(download_callback)
             return {'status': 'finished'}
+        if self._refresh_cache_needed == True:
+            self._silent_refresh_cache(partial(self.install, request, handler, package, icon_url))
+            return
         self._install_remove('InstallPackages', request, handler, package)
     
     def remove(self, request, handler, package):
@@ -344,6 +345,9 @@ class PackagesManager(LinuxSessionManager):
         #        t._s_Package = get_package
         #        t._s_Finished = finished
         #        t.run('GetPackages', 'installed')
+        if self._refresh_cache_needed == True:
+            self._silent_refresh_cache(partial(self.list_, request, handler))
+            return
         _silent_remove = self._silent_remove
         class DpkgGetSelecions(protocol.ProcessProtocol):
             out = ''
@@ -416,6 +420,9 @@ class PackagesManager(LinuxSessionManager):
         t.run('GetUpdates', 'installed')
 
     def perform_updates(self, request, handler):
+        if self._refresh_cache_needed == True:
+            self._silent_refresh_cache(partial(self.perform_updates, request, handler))
+            return
         t = Transaction(request, handler)
         t.run('UpdateSystem', False)
     
@@ -430,6 +437,41 @@ class PackagesManager(LinuxSessionManager):
         if self._prefetch_activated == True:
             self._prefetch_activated = False
         handler.success(request)
+    
+    def _silent_refresh_cache(self, callback=None):
+        log.msg('Running a silent RefreshCache')
+        def finished(exit, runtime):
+            self._refresh_cache_needed = False
+            if callback:
+                callback()
+        t = Transaction(None, None)
+        t._s_Changed = None
+        t._s_Finished = finished
+        t.run('RefreshCache', False)
+    
+    def _check_refresh_cache_needed(self):
+        hosts = []
+        def repodetail(repo_id, description, enabled):
+            source = description.split(' ')[2]
+            if enabled and source.startswith('http'):
+                host = source.split('/')[2]
+                if host not in hosts:
+                    hosts.append(host)
+        def finished(exit, runtime):
+            self._refresh_cache_needed = False
+            for host in hosts:
+                found = False
+                for file in os.listdir('/var/lib/apt/lists'):
+                    if file.startswith(host):
+                        found = True
+                        break
+                if found == False:
+                    log.msg('It seems we need to run a RefreshCache.')
+                    self._refresh_cache_needed = True
+        t = Transaction(None, None)
+        t._s_RepoDetail = repodetail
+        t._s_Finished = finished
+        t._s_Changed = None
+        t.run('GetRepoList', 'installed')
 
 packagesManager = PackagesManager()
-
