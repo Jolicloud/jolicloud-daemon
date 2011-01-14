@@ -164,6 +164,7 @@ class Transaction():
 
 class PackagesManager(LinuxSessionManager):
     _prefetching = False
+    _upgrading = False
     _prefetch_activated = False
     _transactions = {}
     
@@ -200,6 +201,8 @@ class PackagesManager(LinuxSessionManager):
             return
         if self._prefetching == True:
             log.msg('Another prefetch is in progress, cancelling this attempt')
+        elif self._upgrading == True:
+            log.msg('An upgrade is in progress, cancelling this attempt')
         else:
             rc_transaction = Transaction(None, None)
             def rc_finished(exit, runtime):
@@ -423,7 +426,16 @@ class PackagesManager(LinuxSessionManager):
         if self._refresh_cache_needed == True:
             self._silent_refresh_cache(partial(self.perform_updates, request, handler))
             return
+        self._upgrading = True
+        def finished(exit, runtime):
+            self._upgrading = False
+            log.msg('Upgrade Finished [%s] [%s]' % (exit, runtime))
+            if exit == 'success':
+                handler.send_meta(OPERATION_SUCCESSFUL, request=request)
+            else:
+                handler.send_meta(OPERATION_FAILED, request=request)
         t = Transaction(request, handler)
+        t._s_Finished = finished
         t.run('UpdateSystem', False)
     
     def start_prefetch(self, request, handler, delay=300, interval=300):
