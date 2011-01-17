@@ -55,7 +55,8 @@ class PreferencesManager(LinuxSessionManager):
         reactor.spawnProcess(
             GetProcessOutput(),
             '/usr/bin/pkexec',
-            ['pkexec', '/usr/lib/jolicloud-pkg-daemon/utils/autologin'] + args
+            ['pkexec', '/usr/lib/jolicloud-pkg-daemon/utils/autologin'] + args,
+            env=os.environ
         )
     
     def guestmode(self, request, handler, action='get'):
