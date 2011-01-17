@@ -1,5 +1,6 @@
 from zope.interface import implements
 from twisted.plugin import IPlugin
+from twisted.python import log
 
 from jolicloud_pkg_daemon.enums import *
 
@@ -36,11 +37,15 @@ class Manager(object):
     
     def emit(self, event, data):
         if event in self._events:
+            handlers_to_delete = []
             for handler_name in self._events[event]:
                 try:
                     self._events[event][handler_name]['handler'].send_data(self._events[event][handler_name]['request'], data)
-                except AttributeError:
-                    del self._events[event_name][handler_name]
+                except AttributeError, e:
+                    log.msg('Emit Exception. Client is disconnected? %s' % e)
+                    handlers_to_delete.append(handler_name)
+            for handler_to_delete in handlers_to_delete:
+                self._events[event].pop(handler_to_delete)
         else:
             return False
 
