@@ -10,23 +10,14 @@ from jolicloud_pkg_daemon.enums import *
 class FoldersManager(LinuxSessionManager):
     
     def favorites(self, request, handler):
-        def get_favorites(res):
-            retval = []
-            fp = file('%s/.gtk-bookmarks' % os.environ['HOME'])
-            for line in fp.readlines():
-                try:
-                    uri, name = line.split()
-                except ValueError:
-                    uri = line.rstrip()
-                name = os.path.basename(uri)
-                retval.append({'name': name, 'uri': uri})
-            handler.send_data(request, retval)
-            handler.send_meta(OPERATION_SUCCESSFUL, request=request)
-        def failed(err):
-            handler.send_meta(OPERATION_FAILED, request=request)
-        d = Deferred()
-        d.addCallbacks(get_favorites, failed)
-        d.callback(None)
+        retval = []
+        for f in os.listdir(os.environ['HOME']):
+            path = os.path.join(os.environ['HOME'], f)
+            if os.path.isdir(path) and not f.startswith('.'):
+                retval.append({'name': f, 'uri': path})
+        if os.path.exists('/host'):
+            retval.append({'name': 'Windows', 'uri': '/host'})
+        return retval
     
     def open_(self, request, handler, uri):
         if '~' in uri:
@@ -34,7 +25,7 @@ class FoldersManager(LinuxSessionManager):
         reactor.spawnProcess(
             protocol.ProcessProtocol(),
             '/usr/bin/setsid', # setsid - run a program in a new session
-            ['setsid', 'nautilus', str(uri)],
+            ['setsid', 'nautilus', uri.encode('utf-8')],
             env=os.environ
         )
         handler.success(request)
