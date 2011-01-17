@@ -12,7 +12,7 @@ ResultAny=no
 ResultInactive=no
 ResultActive=yes
 
-[Autologin Permissions]
+[UUID Permissions]
 Identity=unix-user:*
 Action=org.jolicloud.uuid
 ResultAny=no
