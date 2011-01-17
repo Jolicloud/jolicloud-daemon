@@ -3,13 +3,20 @@
 slim_conf=/etc/slim.conf
 args=("$@")
 
-if [ "${args[0]}" = "activate" -a -n "${args[1]}" ]; then
+if [ "${args[0]}" = "status" ]; then
+    if STATUS=`egrep "^auto_login\s*yes\$" "$slim_conf"`; then
+        echo "enabled"
+    else
+        echo "disabled"
+    fi
+    exit 0
+elif [ "${args[0]}" = "enable" -a -n "${args[1]}" ]; then
     sed -ibackup -r \
         -e "s/^#?auto_login.*\$/auto_login    yes/" \
         -e "s/^#?default_user.*\$/default_user    ${args[1]}/" \
         $slim_conf
     exit $!
-elif [ "${args[0]}" = "deactivate" ]; then
+elif [ "${args[0]}" = "disable" ]; then
     sed -ibackup -r \
         -e "s/^#?auto_login.*\$/auto_login    no/" \
         -e "s/^#?default_user.*\$/#default_user    simone/" \
