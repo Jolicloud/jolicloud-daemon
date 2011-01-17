@@ -81,7 +81,7 @@ class AppsManager(LinuxSessionManager):
                         if desktops.has_key(desktop):
                             desktops[desktop]['package'] = package
                 handler.send_data(request, desktops.values())
+                handler.success(request)
         reactor.spawnProcess(DpkgOut(), '/usr/bin/dpkg', ['dpkg', '-S'] + desktops.keys())
-        handler.success(request)
 
 appsManager = AppsManager()
