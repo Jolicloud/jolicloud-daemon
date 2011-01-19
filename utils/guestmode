@@ -1,0 +1,28 @@
+#!/bin/bash
+
+slim_conf=/etc/slim.conf
+args=("$@")
+
+if [ "${args[0]}" = "status" ]; then
+    if STATUS=`egrep "^guest_group\s*guests\$" "$slim_conf"`; then
+        echo "enabled"
+    else
+        echo "disabled"
+    fi
+    exit 0
+elif [ "${args[0]}" = "enable" ]; then
+    echo "guest_group guests" >> $slim_conf
+    echo "login_guest_cmd exec /bin/bash -login /usr/share/jolicloud-guestlogin/start-session %session" >> $slim_conf
+    pam-auth-update --package
+    exit $!
+elif [ "${args[0]}" = "disable" ]; then
+    tmp_file=$(mktemp)
+    chmod 0600 $tmp_file
+    grep -v "guest_" $slim_conf > $tmp_file
+    cat $tmp_file > $slim_conf
+    rm $tmp_file
+    pam-auth-update --remove guestlogin
+    exit $!
+fi
+
+exit 42
