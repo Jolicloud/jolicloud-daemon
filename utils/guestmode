@@ -12,7 +12,7 @@ if [ "${args[0]}" = "status" ]; then
     exit 0
 elif [ "${args[0]}" = "enable" ]; then
 
-    if ! CONF_ENTRY=`grep guest_ /etc/slim.conf` 2>/dev/null; then
+    if ! CONF_ENTRY=`grep ^guest_ $slim_conf` 2>/dev/null; then
 	echo "guest_group guests" >> $slim_conf
 	echo "login_guest_cmd exec /bin/bash -login /usr/share/jolicloud-guestlogin/start-session %session" >> $slim_conf
 	pam-auth-update --package
