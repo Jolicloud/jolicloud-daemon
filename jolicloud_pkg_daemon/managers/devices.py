@@ -25,9 +25,9 @@ class DevicesManager(LinuxSessionManager):
         self.dbus_system = dbus.SystemBus()
         self._udisks_proxy = self.dbus_system.get_object(self._NS, self._PATH)
         self._udisks_iface = dbus.Interface(self._udisks_proxy, self._NS)
-        self._udisks_iface.connect_to_signal("DeviceAdded", self._device_added)
-        self._udisks_iface.connect_to_signal("DeviceChanged", self._device_changed)
-        self._udisks_iface.connect_to_signal("DeviceRemoved", self._device_removed)
+        self._udisks_iface.connect_to_signal('DeviceAdded', self._device_added)
+        self._udisks_iface.connect_to_signal('DeviceChanged', self._device_changed)
+        self._udisks_iface.connect_to_signal('DeviceRemoved', self._device_removed)
     
     def _get_size_free(self, mount_point):
         disk = os.statvfs(mount_point)
@@ -60,11 +60,11 @@ class DevicesManager(LinuxSessionManager):
         print 'DEVICE CHANGED', path
         
         def reply_handler(udi, properties):
-            properties = self._parse_volume_properties(properties)
-            if properties:
+            parsed_properties = self._parse_volume_properties(properties)
+            if parsed_properties:
                 self.emit('device_changed',{
                     'udi': udi,
-                    'properties': properties
+                    'properties': parsed_properties
                 })
         def error_handler(udi, error):
             log.msg('[%s] %s' % (udi, error))
@@ -86,20 +86,33 @@ class DevicesManager(LinuxSessionManager):
         })
     
     def _parse_volume_properties(self, dev_props):
-        if dev_props.get('IdUsage', '') == 'filesystem' and not dev_props['DevicePresentationHide'] and not dev_props['DeviceIsDrive']:
+#        print dev_props['DeviceFile']
+#        print 'IdUsage', dev_props.get('IdUsage', '')
+#        print 'DevicePresentationHide', dev_props['DevicePresentationHide']
+#        print 'DeviceIsDrive', dev_props['DeviceIsDrive']
+#        print 'DeviceIsOpticalDisc', dev_props['DeviceIsOpticalDisc']
+#        print 'DeviceIsMounted', dev_props['DeviceIsMounted']
+#        print 'DriveIsMediaEjectable', dev_props['DriveIsMediaEjectable']
+        if dev_props.get('IdUsage', '') == 'filesystem' and \
+           not dev_props['DevicePresentationHide'] and \
+           not dev_props['DeviceIsDrive'] or \
+           dev_props['DriveIsMediaEjectable'] or \
+           dev_props['DriveCanDetach']:
             label, mount_point, size_free = None, None, None
+            if not dev_props['IdLabel'] and (dev_props['DriveIsMediaEjectable'] or dev_props['DriveCanDetach']):
+                label = dev_props['DriveModel']
             if dev_props['DeviceIsMounted']:
-               mount_point = dev_props['DeviceMountPaths'][0]
-               size_free = self._get_size_free(dev_props['DeviceMountPaths'][0])
+                mount_point = dev_props['DeviceMountPaths'][0]
+                size_free = self._get_size_free(dev_props['DeviceMountPaths'][0])
             if mount_point == '/':
-               label = 'Jolicloud'
+                label = 'Jolicloud'
             return {
-               'volume.label': label or dev_props['IdLabel'] or dev_props['IdUuid'],
-               'volume.model': dev_props['DriveModel'],
-               'volume.is_disk': dev_props['DeviceIsOpticalDisc'],
-               'volume.mount_point': mount_point,
-               'volume.size': dev_props['PartitionSize'],
-               'volume.size_free': size_free,
+                'volume.label': label or dev_props['IdLabel'] or dev_props['IdUuid'],
+                'volume.model': dev_props['DriveModel'],
+                'volume.is_disc': dev_props['DriveIsMediaEjectable'],
+                'volume.mount_point': mount_point,
+                'volume.size': dev_props['PartitionSize'],
+                'volume.size_free': size_free,
             }
     
     def volumes(self, request, handler):
@@ -115,7 +128,7 @@ class DevicesManager(LinuxSessionManager):
                 handler.success(request)
         def error_handler(udi, error):
             log.msg('[%s] %s' % (udi, error))
-            handler.failed()
+            handler.failed(request)
         for device in devices:
             props = dbus.Interface(
                 dbus.SystemBus().get_object('org.freedesktop.UDisks', device),
@@ -126,6 +139,111 @@ class DevicesManager(LinuxSessionManager):
                 reply_handler=partial(reply_handler, device),
                 error_handler=partial(error_handler, device)
             )
+    
+    def mount(self, request, handler, udi):
+        props_iface = dbus.Interface(
+            dbus.SystemBus().get_object('org.freedesktop.UDisks', udi),
+            'org.freedesktop.DBus.Properties'
+        )
+        def reply_handler(udi, properties, mount_path):
+            log.msg('[MOUNT SUCCESS] %s %s' % (udi, mount_path))
+            handler.send_data(request, {
+                'udi': udi,
+                'properties': properties
+            })
+            handler.success(request)
+        def error_handler(udi, error):
+            log.msg('[%s] %s' % (udi, error))
+            handler.failed(request)
+        def props_reply_handler(udi, properties):
+            if properties['DeviceIsMounted']:
+                log.msg('[%s] Device is already mounted' % udi)
+                return handler.failed(request)
+            dev_iface = dbus.Interface(
+                dbus.SystemBus().get_object('org.freedesktop.UDisks', udi),
+                'org.freedesktop.UDisks.Device'
+            )
+            dev_iface.FilesystemMount(
+                properties['IdType'],
+                [],
+                reply_handler=partial(reply_handler, udi, properties),
+                error_handler=partial(error_handler, udi)
+            )
+        props_iface.GetAll(
+            'org.freedesktop.UDisks.Device',
+            reply_handler=partial(props_reply_handler, udi),
+            error_handler=partial(error_handler, udi)
+        )
+    
+    def unmount(self, request, handler, udi):
+        props_iface = dbus.Interface(
+            dbus.SystemBus().get_object('org.freedesktop.UDisks', udi),
+            'org.freedesktop.DBus.Properties'
+        )
+        def reply_handler(udi, properties):
+            log.msg('[UNMOUNT SUCCESS] %s' % udi)
+            handler.success(request)
+        def error_handler(udi, error):
+            log.msg('[%s] %s' % (udi, error))
+            handler.failed(request)
+        def props_reply_handler(udi, properties):
+            if not properties['DeviceIsMounted']:
+                log.msg('[%s] Device is not mounted' % udi)
+                return handler.failed(request)
+            dev_iface = dbus.Interface(
+                dbus.SystemBus().get_object('org.freedesktop.UDisks', udi),
+                'org.freedesktop.UDisks.Device'
+            )
+            dev_iface.FilesystemUnmount(
+                [],
+                reply_handler=partial(reply_handler, udi, properties),
+                error_handler=partial(error_handler, udi)
+            )
+        props_iface.GetAll(
+            'org.freedesktop.UDisks.Device',
+            reply_handler=partial(props_reply_handler, udi),
+            error_handler=partial(error_handler, udi)
+        )
+    
+    def eject(self, request, handler, udi):
+        props_iface = dbus.Interface(
+            dbus.SystemBus().get_object('org.freedesktop.UDisks', udi),
+            'org.freedesktop.DBus.Properties'
+        )
+        dev_iface = dbus.Interface(
+            dbus.SystemBus().get_object('org.freedesktop.UDisks', udi),
+            'org.freedesktop.UDisks.Device'
+        )
+        def error_handler(udi, error):
+            log.msg('[%s] %s' % (udi, error))
+            handler.failed(request)
+        def eject_reply_handler(udi, properties):
+            log.msg('[EJECT SUCCESS] %s' % udi)
+            handler.success(request)
+        def reply_handler(udi, properties):
+            log.msg('[UNMOUNT SUCCESS] %s' % udi)
+            if not properties['DriveIsMediaEjectable']:
+                log.msg('[%s] Drive is not ejectable' % udi)
+                return handler.failed(request)
+            dev_iface.DriveEject(
+                [],
+                reply_handler=partial(eject_reply_handler, udi, properties),
+                error_handler=partial(error_handler, udi)
+            )
+        def props_reply_handler(udi, properties):
+            if not properties['DeviceIsMounted']:
+                log.msg('[%s] Device is not mounted' % udi)
+                return handler.failed(request)
+            dev_iface.FilesystemUnmount(
+                [],
+                reply_handler=partial(reply_handler, udi, properties),
+                error_handler=partial(error_handler, udi)
+            )
+        props_iface.GetAll(
+            'org.freedesktop.UDisks.Device',
+            reply_handler=partial(props_reply_handler, udi),
+            error_handler=partial(error_handler, udi)
+        )
 
 devicesManager = DevicesManager()
 
