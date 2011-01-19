@@ -58,10 +58,11 @@ class PowerManager(LinuxSessionManager):
         self._upower_iface.Hibernate(reply_handler=reply_handler, error_handler=error_handler)
 
     def sleep(self, request, handler):
+        # Note: we always return success
         def reply_handler():
             handler.success(request)
         def error_handler(error):
-            handler.failed(request)
+            handler.success(request)
         self._upower_iface.Suspend(reply_handler=reply_handler, error_handler=error_handler)
 
     def on_battery(self, request, handler):
