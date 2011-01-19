@@ -59,9 +59,34 @@ class PreferencesManager(LinuxSessionManager):
             env=os.environ
         )
     
-    def guestmode(self, request, handler, action='get'):
-        if 'admin' in self._groups:
-            return True
-        return False
+    def guestmode(self, request, handler, action='status'):
+        if 'admin' not in self._groups:
+            return handler.failed(request) # TODO: Permission denied
+        
+        if action not in ['status', 'enable', 'disable']:
+            return handler.failed(request) # TODO: Wrong params
+        
+        args = [action.encode('utf-8')]
+#        if action == 'enable':
+#            args.append(os.getlogin())
+        
+        class GetProcessOutput(protocol.ProcessProtocol):
+            out = ''
+            def outReceived(self, data):
+                self.out += data
+            def errReceived(self, data):
+                log.msg("[utils/autologin] [stderr] %s" % data)
+            def processEnded(self, status_object):
+                if status_object.value.exitCode != 0:
+                    return handler.failed(request)
+                if action == 'status':
+                    handler.send_data(request, self.out.strip())
+                handler.success(request)
+        reactor.spawnProcess(
+            GetProcessOutput(),
+            '/usr/bin/pkexec',
+            ['pkexec', '/usr/lib/jolicloud-pkg-daemon/utils/guestmode'] + args,
+            env=os.environ
+        )
 
 preferencesManager = PreferencesManager()
