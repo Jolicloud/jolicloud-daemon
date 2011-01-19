@@ -3,6 +3,7 @@
 __author__ = 'Jeremy Bethmont'
 
 import os
+import grp
 
 from ConfigParser import SafeConfigParser
 
@@ -18,6 +19,7 @@ class DaemonManager(LinuxSessionManager):
     _OEM_USER_LOGNAME = 'oem'
     _OEM_CONF_FILE = '/etc/jolicloud-oem.conf'
     
+    # NOTE: is_live also returns is_guest
     def is_live(self, request, handler):
         """Find out if we are running in a live (trial) session"""
         is_live = False
@@ -27,14 +29,24 @@ class DaemonManager(LinuxSessionManager):
             if l.find('/cdrom/preseed/jolicloud.seed') >= 0:
                 is_live = True
             f.close()
-        return is_live
+        return is_live or self.is_guest(request, handler)
+    
+    def is_guest(self, request, handler):
+        for group in os.getgroups():
+            if grp.getgrgid(group).gr_name == 'guests':
+                return True
+        return False
     
     def version(self, request, handler):
         return '1.1.20'
     
     def computer(self, request, handler):
         # Returns uuid, password and oem
-        retval = {}
+        retval = {
+            'settings': {
+                'autologin': True
+            }
+        }
         # OEM
         try:
             cp = SafeConfigParser()
