@@ -11,16 +11,18 @@ if [ "${args[0]}" = "status" ]; then
     fi
     exit 0
 elif [ "${args[0]}" = "enable" ]; then
-    echo "guest_group guests" >> $slim_conf
-    echo "login_guest_cmd exec /bin/bash -login /usr/share/jolicloud-guestlogin/start-session %session" >> $slim_conf
-    pam-auth-update --package
+
+    if ! CONF_ENTRY=`grep guest_ /etc/slim.conf` 2>/dev/null; then
+	echo "guest_group guests" >> $slim_conf
+	echo "login_guest_cmd exec /bin/bash -login /usr/share/jolicloud-guestlogin/start-session %session" >> $slim_conf
+	pam-auth-update --package
+    fi
     exit $!
 elif [ "${args[0]}" = "disable" ]; then
-    tmp_file=$(mktemp)
-    chmod 0600 $tmp_file
-    grep -v "guest_" $slim_conf > $tmp_file
-    cat $tmp_file > $slim_conf
-    rm $tmp_file
+    sed -ibackup -r \
+        -e "/^#?guest_group.*\$/d" \
+        -e "/^#?login_guest_cmd.*\$/d" \
+        $slim_conf
     pam-auth-update --remove guestlogin
     exit $!
 fi
