@@ -182,10 +182,6 @@ class DevicesManager(LinuxSessionManager):
         )
         def reply_handler(udi, properties):
             log.msg('[UNMOUNT SUCCESS] %s' % udi)
-            handler.send_data(request, {
-                'udi': udi,
-                'properties': properties
-            })
             handler.success(request)
         def error_handler(udi, error):
             log.msg('[%s] %s' % (udi, error))
@@ -223,10 +219,6 @@ class DevicesManager(LinuxSessionManager):
             handler.failed(request)
         def eject_reply_handler(udi, properties):
             log.msg('[EJECT SUCCESS] %s' % udi)
-            handler.send_data(request, {
-                'udi': udi,
-                'properties': properties
-            })
             handler.success(request)
         def reply_handler(udi, properties):
             log.msg('[UNMOUNT SUCCESS] %s' % udi)
