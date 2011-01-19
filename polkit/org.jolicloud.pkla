@@ -12,6 +12,13 @@ ResultAny=no
 ResultInactive=no
 ResultActive=yes
 
+[Guestmode Permissions]
+Identity=unix-group:admin
+Action=org.jolicloud.autologin
+ResultAny=no
+ResultInactive=no
+ResultActive=yes
+
 [UUID Permissions]
 Identity=unix-user:*
 Action=org.jolicloud.uuid

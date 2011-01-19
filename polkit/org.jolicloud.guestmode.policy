@@ -4,18 +4,18 @@
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <policyconfig>
 
-  <vendor>Jolicloud Autologin</vendor>
+  <vendor>Jolicloud Guestmode</vendor>
   <vendor_url>http://hal.freedesktop.org/docs/PolicyKit/</vendor_url>
 
-  <action id="org.jolicloud.autologin">
-    <description>Activate or Deactivate autologin</description>
-    <message>Authentication is required to run the Jolicloud Autologin program</message>
-    <icon_name>preferences-system</icon_name> 
+  <action id="org.jolicloud.guestmode">
+    <description>Activate or Deactivate guestmode</description>
+    <message>Authentication is required to run the Jolicloud Guestmode program</message>
+    <icon_name>preferences-system</icon_name>
     <defaults>
       <allow_any>no</allow_any>
       <allow_inactive>no</allow_inactive>
       <allow_active>auth_self_keep</allow_active>
     </defaults>
-    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/jolicloud-pkg-daemon/utils/autologin</annotate>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/jolicloud-pkg-daemon/utils/guestmode</annotate>
   </action>
 </policyconfig>
