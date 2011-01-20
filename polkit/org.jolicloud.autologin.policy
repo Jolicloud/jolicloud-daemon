@@ -16,6 +16,6 @@
       <allow_inactive>no</allow_inactive>
       <allow_active>auth_self_keep</allow_active>
     </defaults>
-    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/jolicloud-pkg-daemon/utils/autologin</annotate>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/lib/jolicloud-daemon/utils/autologin</annotate>
   </action>
 </policyconfig>

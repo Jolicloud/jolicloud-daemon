@@ -4,8 +4,8 @@ from twisted.internet import reactor, protocol
 from twisted.internet.utils import getProcessValue
 from twisted.internet.defer import Deferred
 
-from jolicloud_pkg_daemon.plugins import LinuxSessionManager
-from jolicloud_pkg_daemon.enums import *
+from jolicloud_daemon.plugins import LinuxSessionManager
+from jolicloud_daemon.enums import *
 
 class FoldersManager(LinuxSessionManager):
     

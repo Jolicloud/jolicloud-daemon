@@ -8,9 +8,9 @@ import grp
 from twisted.python import log
 from twisted.plugin import getPlugins
 
-from jolicloud_pkg_daemon.plugins import LinuxSessionManager
-from jolicloud_pkg_daemon.enums import *
-from jolicloud_pkg_daemon import managers
+from jolicloud_daemon.plugins import LinuxSessionManager
+from jolicloud_daemon.enums import *
+from jolicloud_daemon import managers
 
 class InfoManager(LinuxSessionManager):
     

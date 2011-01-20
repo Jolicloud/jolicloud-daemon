@@ -13,7 +13,7 @@ from twisted.python import log
 from twisted.internet import reactor, protocol
 from twisted.web.client import _makeGetterFactory, HTTPClientFactory
 
-from jolicloud_pkg_daemon.plugins import LinuxSessionManager
+from jolicloud_daemon.plugins import LinuxSessionManager
 
 def myGetPage(url, contextFactory=None, *args, **kwargs):
     return _makeGetterFactory(
@@ -97,7 +97,7 @@ class NetworkManager(LinuxSessionManager):
                     reactor.spawnProcess(
                         protocol.ProcessProtocol(),
                         '/usr/bin/setsid', # setsid - run a program in a new session
-                        ['setsid', '/usr/lib/jolicloud-pkg-daemon/utils/wifi-connect'],
+                        ['setsid', '/usr/lib/jolicloud-daemon/utils/wifi-connect'],
                         env=os.environ
                     )
             factory = myGetPage('http://ping.jolicloud.com', timeout=30)

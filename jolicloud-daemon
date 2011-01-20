@@ -40,8 +40,8 @@ if options.use_local_dirs:
     os.environ.setdefault('JPD_HTDOCS_PATH', 'htdocs/')
     os.environ.setdefault('JPD_ICONS_PATH', 'icons/')
 else:
-    os.environ.setdefault('JPD_HTDOCS_PATH', '/usr/share/jolicloud-pkg-daemon/htdocs/')
-    os.environ.setdefault('JPD_ICONS_PATH', '/usr/share/jolicloud-pkg-daemon/icons/')
+    os.environ.setdefault('JPD_HTDOCS_PATH', '/usr/share/jolicloud-daemon/htdocs/')
+    os.environ.setdefault('JPD_ICONS_PATH', '/usr/share/jolicloud-daemon/icons/')
 
 if options.use_debug:
     os.environ.setdefault('JPD_DEBUG', '1')
@@ -50,6 +50,6 @@ os.environ.setdefault('JPD_SESSION', '1')
 if options.use_system:
     os.environ.setdefault('JPD_SYSTEM', '1')
 
-from jolicloud_pkg_daemon.main import start
+from jolicloud_daemon.main import start
 
 start()

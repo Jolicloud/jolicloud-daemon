@@ -8,8 +8,8 @@ import grp
 from twisted.python import log
 from twisted.internet import reactor, protocol
 
-from jolicloud_pkg_daemon.plugins import LinuxSessionManager
-from jolicloud_pkg_daemon.enums import *
+from jolicloud_daemon.plugins import LinuxSessionManager
+from jolicloud_daemon.enums import *
 
 class PreferencesManager(LinuxSessionManager):
     
@@ -55,7 +55,7 @@ class PreferencesManager(LinuxSessionManager):
         reactor.spawnProcess(
             GetProcessOutput(),
             '/usr/bin/pkexec',
-            ['pkexec', '/usr/lib/jolicloud-pkg-daemon/utils/autologin'] + args,
+            ['pkexec', '/usr/lib/jolicloud-daemon/utils/autologin'] + args,
             env=os.environ
         )
     
@@ -85,7 +85,7 @@ class PreferencesManager(LinuxSessionManager):
         reactor.spawnProcess(
             GetProcessOutput(),
             '/usr/bin/pkexec',
-            ['pkexec', '/usr/lib/jolicloud-pkg-daemon/utils/guestmode'] + args,
+            ['pkexec', '/usr/lib/jolicloud-daemon/utils/guestmode'] + args,
             env=os.environ
         )
 

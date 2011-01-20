@@ -12,8 +12,8 @@ from twisted.python import log
 from twisted.internet import reactor, protocol
 from twisted.web.client import downloadPage
 
-from jolicloud_pkg_daemon.plugins import LinuxSessionManager
-from jolicloud_pkg_daemon.enums import *
+from jolicloud_daemon.plugins import LinuxSessionManager
+from jolicloud_daemon.enums import *
 
 class Transaction():
     

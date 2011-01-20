@@ -10,8 +10,8 @@ from ConfigParser import SafeConfigParser
 from twisted.python import log
 from twisted.internet import reactor, protocol
 
-from jolicloud_pkg_daemon.plugins import LinuxSessionManager
-from jolicloud_pkg_daemon.enums import *
+from jolicloud_daemon.plugins import LinuxSessionManager
+from jolicloud_daemon.enums import *
 
 class DaemonManager(LinuxSessionManager):
     
@@ -77,7 +77,7 @@ class DaemonManager(LinuxSessionManager):
         reactor.spawnProcess(
             GetProcessOutput(),
             '/usr/bin/pkexec',
-            ['pkexec', '/usr/lib/jolicloud-pkg-daemon/utils/uuid']
+            ['pkexec', '/usr/lib/jolicloud-daemon/utils/uuid']
         )
 
     def kill_nickel(self, request, handler):

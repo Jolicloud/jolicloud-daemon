@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Loading Jolicloud...</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content="3;url=http://my.jolicloud.com/" />
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+    <script>
+      function redirect() {
+        document.onmousemove = do_redirect;
+      }
+
+      function do_redirect() {
+        setTimeout(boom, 1500);
+      }
+
+      function boom() {
+        window.location = 'http://my.jolicloud.com/';
+      }
+    </script>
+</head>
+<body onload="redirect();">
+</body>
+</html>
