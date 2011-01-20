@@ -2,13 +2,25 @@
 
 __author__ = 'Jeremy Bethmont'
 
+import os
 import dbus
 import urllib2
 import subprocess
 
+from functools import partial
+
 from twisted.python import log
+from twisted.internet import reactor, protocol
+from twisted.web.client import _makeGetterFactory, HTTPClientFactory
 
 from jolicloud_pkg_daemon.plugins import LinuxSessionManager
+
+def myGetPage(url, contextFactory=None, *args, **kwargs):
+    return _makeGetterFactory(
+        url,
+        HTTPClientFactory,
+        contextFactory=contextFactory,
+        *args, **kwargs)
 
 class NetworkManager(LinuxSessionManager):
     
@@ -73,19 +85,24 @@ class NetworkManager(LinuxSessionManager):
                         for key in self._NM_802_11_AP_SEC:
                             if self._NM_802_11_AP_SEC[key] & rsn_flags or self._NM_802_11_AP_SEC[key] & wpa_flags:
                                 on_public_wifi = False
+        
         if on_public_wifi:
             log.msg('Connected to a public WiFi')
-            try:
-                response = urllib2.urlopen('http://ping.jolicloud.com')
-                if 'Joli-Length' in response.headers and (response.headers['Joli-Length'] == response.headers['Content-Length']):
+            def getpage_callback(factory, result):
+                if 'joli-length' in factory.response_headers and \
+                   (len(result) == int(factory.response_headers['joli-length'][0]) == int(factory.response_headers['content-length'][0])):
                     log.msg('Internet connection seems to work')
                 else:
-                    log.msg('Internet connections seems to be redirected. Launching jolicloud-wifi-connect.')
-                    subprocess.call(['/usr/bin/jolicloud-wifi-connect'])
-            except OSError:
-                log.msg('Failed to launch /usr/bin/jolicloud-wifi-connect')
-            except urllib2.URLError:
-                log.msg('Internet connection seems to not work correctly, request to ping.jolicloud.com timouted.')
+                    log.msg('Internet connections seems to be redirected. Launching wifi-connect.')
+                    reactor.spawnProcess(
+                        protocol.ProcessProtocol(),
+                        '/usr/bin/setsid', # setsid - run a program in a new session
+                        ['setsid', '/usr/lib/jolicloud-pkg-daemon/utils/wifi-connect'],
+                        env=os.environ
+                    )
+            factory = myGetPage('http://ping.jolicloud.com', timeout=30)
+            factory.deferred.addCallback(partial(getpage_callback, factory))
+            response = urllib2.urlopen('http://ping.jolicloud.com')
 
     def on_cellular_network(self, request, handler):
         """

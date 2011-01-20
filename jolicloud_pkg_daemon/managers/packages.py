@@ -10,7 +10,7 @@ from functools import partial
 
 from twisted.python import log
 from twisted.internet import reactor, protocol
-from twisted.web.client import getPage
+from twisted.web.client import downloadPage
 
 from jolicloud_pkg_daemon.plugins import LinuxSessionManager
 from jolicloud_pkg_daemon.enums import *
@@ -298,11 +298,8 @@ class PackagesManager(LinuxSessionManager):
             # We copy the default icon first, in case we can't download the real icon
             shutil.copy('%sjolicloud-webapp-default.png' % os.environ['JPD_ICONS_PATH'], path)
             def download_callback(result):
-                log.msg('Saving Icon ~/.local/share/icons/%s.png (Size: %d)' % (package, len(result)))
-                f = open(path, 'w')
-                f.write(result)
-                f.close()
-            getPage(str(icon_url), timeout=10).addCallback(download_callback)
+                log.msg('Icon saved: ~/.local/share/icons/%s.png' % package)
+            downloadPage(str(icon_url), path, timeout=30).addCallback(download_callback)
             return {'status': 'finished'}
         if self._refresh_cache_needed == True:
             self._silent_refresh_cache(partial(self.install, request, handler, package, icon_url))

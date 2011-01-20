@@ -6,7 +6,7 @@ import os
 import shlex
 
 from twisted.internet import reactor, protocol
-from twisted.web.client import getPage
+from twisted.web.client import downloadPage
 from twisted.python import log
 
 from jolicloud_pkg_daemon.plugins import LinuxSessionManager
@@ -38,11 +38,12 @@ class AppsManager(LinuxSessionManager):
     
     def launch_webapp(self, request, handler, package, url, icon_url):
         def download_callback(result):
-            log.msg('Saving Icon ~/.local/share/icons/%s.png (Size: %d)' % (package, len(result)))
-            f = open('%s/.local/share/icons/%s.png' % (os.getenv('HOME'), package), 'w')
-            f.write(result)
-            f.close()
-        getPage(str(icon_url), timeout=10).addCallback(download_callback)
+            log.msg('Icon saved: ~/.local/share/icons/%s.png' % package)
+        downloadPage(
+            str(icon_url),
+            '%s/.local/share/icons/%s.png' % (os.getenv('HOME'), package),
+            timeout=30
+        ).addCallback(download_callback)
         self.launch(request, handler, 'jolicloud-webapps-engine --app=%s --icon-id=%s' % (str(url), str(package)))
     
     def launch_desktop(self, request, handler, desktop):
