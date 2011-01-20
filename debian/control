@@ -1,4 +1,4 @@
-Source: jolicloud-pkg-daemon
+Source: jolicloud-daemon
 Section: jolicloud/net
 Priority: optional
 Maintainer: Jolicloud developers <developers@jolicloud.org>
@@ -6,8 +6,14 @@ Build-Depends: cdbs (>= 0.4.49), debhelper (>= 7), python (>= 2.4), python-suppo
 Standards-Version: 3.8.0
 Homepage: http://www.jolicloud.com
 
-Package: jolicloud-pkg-daemon
+Package: jolicloud-daemon
 Architecture: any
-Depends: python (>=2.6), python-twisted-core, python-twisted-web, python-simplejson
-Description: Jolicloud Pkg Daemon
-
+Depends: python (>=2.6), python-twisted-core, python-twisted-web, python-simplejson,
+ python-webkit, packagekit, policykit-1, upower, udisks, ${shlibs:Depends}
+Provides: jolicloud-pkg-daemon
+Conflicts: jolicloud-pkg-daemon
+Replaces: jolicloud-pkg-daemon
+Description: Jolicloud Daemon
+ This daemon manages the communication between Jolicloud
+ and your system.
+ It provides a local WebSocket server interface.

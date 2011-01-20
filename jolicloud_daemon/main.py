@@ -33,11 +33,11 @@ from twisted.web import resource, static, twcgi
 from twisted.web.server import Request
 from twisted.plugin import getPlugins
 
-from jolicloud_pkg_daemon.websocket import WebSocketRequest, WebSocketHandler, WebSocketSite
-from jolicloud_pkg_daemon.jolidaemon import ijolidaemon
-from jolicloud_pkg_daemon.enums import *
-from jolicloud_pkg_daemon import managers
-from jolicloud_pkg_daemon.plugins import SystemManager, SessionManager
+from jolicloud_daemon.websocket import WebSocketRequest, WebSocketHandler, WebSocketSite
+from jolicloud_daemon.jolidaemon import ijolidaemon
+from jolicloud_daemon.enums import *
+from jolicloud_daemon import managers
+from jolicloud_daemon.plugins import SystemManager, SessionManager
 
 TRUSTED_URI = (
     # re.compile(".*"),

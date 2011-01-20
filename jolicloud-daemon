@@ -50,6 +50,6 @@ os.environ.setdefault('JPD_SESSION', '1')
 if options.use_system:
     os.environ.setdefault('JPD_SYSTEM', '1')
 
-from jolicloud_pkg_daemon.main import start
+from jolicloud_daemon.main import start
 
 start()

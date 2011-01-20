@@ -9,8 +9,8 @@ from functools import partial
 
 from twisted.python import log
 
-from jolicloud_pkg_daemon.plugins import LinuxSessionManager
-from jolicloud_pkg_daemon.enums import *
+from jolicloud_daemon.plugins import LinuxSessionManager
+from jolicloud_daemon.enums import *
 
 class DevicesManager(LinuxSessionManager):
     
