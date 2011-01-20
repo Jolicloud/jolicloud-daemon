@@ -14,7 +14,7 @@ ResultActive=yes
 
 [Guestmode Permissions]
 Identity=unix-group:admin
-Action=org.jolicloud.autologin
+Action=org.jolicloud.guestmode
 ResultAny=no
 ResultInactive=no
 ResultActive=yes
