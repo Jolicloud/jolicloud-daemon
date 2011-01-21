@@ -1,10 +1,10 @@
 *.pyc
 /debian/files
-/debian/jolicloud-pkg-daemon/*
-/debian/jolicloud-pkg-daemon.*.debhelper
+/debian/jolicloud-daemon/*
+/debian/jolicloud-daemon.*.debhelper
 /debian/python-module-stampdir
-/debian/jolicloud-pkg-daemon.substvars
-/debian/jolicloud-pkg-daemon.debhelper.log
+/debian/jolicloud-daemon.substvars
+/debian/jolicloud-daemon.debhelper.log
 /build
 /dist
 .idea

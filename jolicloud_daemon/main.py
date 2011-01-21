@@ -28,6 +28,7 @@ except ImportError:
 
 from twisted.internet import reactor
 from twisted.python import log
+from twisted.python.logfile import LogFile
 from twisted.internet.protocol import Protocol, Factory
 from twisted.web import resource, static, twcgi
 from twisted.web.server import Request
@@ -198,31 +199,37 @@ class JolicloudWSHandler(WebSocketHandler):
         log.msg('Connection lost')
 
 def start():
-    log.startLogging(sys.stdout)
-    
-    # Websocket server
-    #kwargs = { 'resource': File(os.environ['JPD_HTDOCS_PATH']) }
-    #site = JolicloudWSSite(**kwargs)
-    
     root = static.File(os.environ['JPD_HTDOCS_PATH'])
     root.putChild("cgi-bin", twcgi.CGIDirectory(os.environ['JPD_HTDOCS_PATH'] + '/cgi-bin'))
     site = JolicloudWSSite(root)
     
     site.addHandler('/jolicloud/', JolicloudWSHandler)
     
+    # Setting up the log file path
+    if os.environ.get('JPD_SYSTEM', '0') == '1':
+        if os.getuid():
+            log.err('You must be root to run this daemon in system mode.')
+            exit()
+        log_path = '/var/log'
+    else:
+        try:
+            import xdg.BaseDirectory
+            log_path = xdg.BaseDirectory.save_data_path('Jolicloud', 'jolicloud-daemon')
+        except ImportError:
+            log_path = os.path.join(os.getenv('HOME'), '.local', 'share', 'Jolicloud', 'jolicloud-daemon')
     
     # http://twistedmatrix.com/documents/9.0.0/web/howto/using-twistedweb.html#auto5
     if os.environ.get('JPD_DEBUG', '0') == '1':
+        log.startLogging(sys.stdout)
+        log.startLogging(LogFile('jolicloud-daemon.log', log_path, maxRotatedFiles=2))
         reactor.listenTCP(8004, site)
     else:
+        log.startLogging(LogFile('jolicloud-daemon.log', log_path, maxRotatedFiles=2))
         reactor.listenTCP(8004, site, interface='127.0.0.1')
     # TODO, use random port for session daemon
     
     # We load the plugins:
     if os.environ.get('JPD_SYSTEM', '0') == '1':
-        if os.getuid():
-            log.msg('You must be root to run this daemon in system mode.')
-            exit()
         log.msg('We load the system plugins.')
         plugins = getPlugins(ijolidaemon.ISystemManager, managers)
     else:
