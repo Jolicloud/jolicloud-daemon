@@ -44,7 +44,10 @@ class AppsManager(LinuxSessionManager):
             '%s/.local/share/icons/%s.png' % (os.getenv('HOME'), package),
             timeout=30
         ).addCallback(download_callback)
-        self.launch(request, handler, 'jolicloud-webapps-engine --app=%s --icon-id=%s' % (str(url), str(package)))
+        if os.path.exists('/usr/bin/jolicloud-webapps-engine'):
+            self.launch(request, handler, 'jolicloud-webapps-engine --app=%s --icon-id=%s' % (str(url), str(package)))
+        else:
+            self.launch(request, handler, 'google-chrome --app=%s' % str(url))
     
     def launch_desktop(self, request, handler, desktop):
         entry = DesktopEntry()

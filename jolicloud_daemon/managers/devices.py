@@ -34,7 +34,7 @@ class DevicesManager(LinuxSessionManager):
         return disk.f_bsize * disk.f_bavail
     
     def _device_added(self, path):
-        print 'DEVICE ADDED', path
+        log.msg('DEVICE ADDED %s' % path)
         
         def reply_handler(udi, properties):
             properties = self._parse_volume_properties(properties)
@@ -57,7 +57,7 @@ class DevicesManager(LinuxSessionManager):
         )
     
     def _device_changed(self, path):
-        print 'DEVICE CHANGED', path
+        log.msg('DEVICE CHANGED %s' % path)
         
         def reply_handler(udi, properties):
             parsed_properties = self._parse_volume_properties(properties)
@@ -80,7 +80,7 @@ class DevicesManager(LinuxSessionManager):
         )
     
     def _device_removed(self, path):
-        print 'DEVICE REMOVED', path
+        log.msg('DEVICE REMOVED %s' % path)
         self.emit('device_removed', {
             'udi': path
         })
@@ -96,8 +96,8 @@ class DevicesManager(LinuxSessionManager):
         if dev_props.get('IdUsage', '') == 'filesystem' and \
            not dev_props['DevicePresentationHide'] and \
            not dev_props['DeviceIsDrive'] or \
-           dev_props['DriveIsMediaEjectable'] or \
-           dev_props['DriveCanDetach']:
+           dev_props['DriveIsMediaEjectable']:# or \
+           #dev_props['DriveCanDetach']:
             label, mount_point, size_free = None, None, None
             if not dev_props['IdLabel'] and (dev_props['DriveIsMediaEjectable'] or dev_props['DriveCanDetach']):
                 label = dev_props['DriveModel']
