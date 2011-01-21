@@ -125,7 +125,7 @@ class JolicloudWSHandler(WebSocketHandler):
         self.send_meta(OPERATION_FAILED, request)
     
     def frameReceived(self, frame):
-        print 'I/O < %s' % frame
+        log.msg('I/O < %s' % frame)
         # Try and parse request json
         try:
             request = JolicloudRequest(frame)
@@ -236,7 +236,7 @@ def start():
         log.msg('We load the session plugins.')
         plugins = getPlugins(ijolidaemon.ISessionManager, managers)
     for plugin in plugins:
-        print plugin.__class__.__name__
+        log.msg(plugin.__class__.__name__)
     
     reactor.run()
 

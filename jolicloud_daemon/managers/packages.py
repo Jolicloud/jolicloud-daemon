@@ -172,6 +172,9 @@ class PackagesManager(LinuxSessionManager):
     
     events = ['updates_ready']
     
+    def __init__(self):
+        self._check_refresh_cache_needed()
+    
     def _on_cellular_network(self):
         """
         We check if the default connection use one of the following DeviceType:
