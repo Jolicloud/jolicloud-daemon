@@ -165,7 +165,10 @@ class Transaction():
 class PackagesManager(LinuxSessionManager):
     _prefetching = False
     _upgrading = False
+    _installing_or_removing = False
     _prefetch_activated = False
+    _prefetch_interval = 300
+    _prefetch_force = False
     _transactions = {}
     
     _refresh_cache_needed = False
@@ -206,6 +209,8 @@ class PackagesManager(LinuxSessionManager):
             log.msg('Another prefetch is in progress, cancelling this attempt')
         elif self._upgrading == True:
             log.msg('An upgrade is in progress, cancelling this attempt')
+        elif self._installing_or_removing == True:
+            log.msg('An install or remove is in progress, cancelling this attempt')
         else:
             rc_transaction = Transaction(None, None)
             def rc_finished(exit, runtime):
@@ -243,8 +248,8 @@ class PackagesManager(LinuxSessionManager):
             rc_transaction._s_Finished = rc_finished
             rc_transaction._s_Changed = None
             network_state = rc_transaction.get_property('NetworkState')
-            if network_state != 'offline':
-                if self._on_cellular_network():
+            if network_state != 'offline' or self._prefetch_force:
+                if self._on_cellular_network() and not self._prefetch_force:
                     log.msg('On cellular network, not starting the prefetch')
                 else:
                     self._prefetching = True
@@ -255,16 +260,25 @@ class PackagesManager(LinuxSessionManager):
         reactor.callLater(self._prefetch_interval, self._prefetch)
     
     def _install_remove(self, method, request, handler, package):
+        self._installing_or_removing = True
         result = []
         def resolve_package(i, p_id, summary):
             result.append(str(p_id))
         def resolve_finished(exit, runtime):
             if exit == 'success' and len(result):
-                t = Transaction(request, handler)
+                t_ir = Transaction(request, handler)
+                def ir_finished(exit, runtime):
+                    self._installing_or_removing = False
+                    log.msg('%s Finished [%s] [%s]' % (method, exit, runtime))
+                    if exit == 'success':
+                        handler.send_meta(OPERATION_SUCCESSFUL, request=request)
+                    else:
+                        handler.send_meta(OPERATION_FAILED, request=request)
+                t_ir._s_Finished = ir_finished
                 if method == 'InstallPackages':
-                    t.run(method, False, result)
+                    t_ir.run(method, False, result)
                 elif method == 'RemovePackages':
-                    t.run(method, result, False, True)
+                    t_ir.run(method, result, False, True)
             else:
                 return handler.send_meta(OPERATION_FAILED, request=request)
         
@@ -278,23 +292,7 @@ class PackagesManager(LinuxSessionManager):
             package = [package]
         t.run('Resolve', 'none', package)
         # apt-cache show `dpkg-query -W --showformat='${Package}=${Version}' gajim` | egrep '(Package|Version|Architecture|Filename)'
-    
-    def _silent_remove(self, packages):
-        result = []
-        def resolve_package(i, p_id, summary):
-            result.append(str(p_id))
-        def resolve_finished(exit, runtime):
-            if exit == 'success' and len(result):
-                t = Transaction(None, None)
-                t._s_Finished = None
-                t._s_Changed = None
-                t.run('RemovePackages', result, False, True)
-        t = Transaction(None, None)
-        t._s_Package = resolve_package
-        t._s_Finished = resolve_finished
-        t._s_Changed = None
-        t.run('Resolve', 'none', packages)
-    
+      
     def install(self, request, handler, package, icon_url=None):
         if package.startswith('jolicloud-webapp-'):
             path = '%s/.local/share/icons/%s.png' % (os.getenv('HOME'), package)
@@ -438,10 +436,11 @@ class PackagesManager(LinuxSessionManager):
         t._s_Finished = finished
         t.run('UpdateSystem', False)
     
-    def start_prefetch(self, request, handler, delay=300, interval=300):
+    def start_prefetch(self, request, handler, delay=300, interval=300, force=False):
         if self._prefetch_activated == False:
             self._prefetch_activated = True
             self._prefetch_interval = interval
+            self._prefetch_force = force
             reactor.callLater(delay, self._prefetch)
         handler.success(request)
     
@@ -449,6 +448,22 @@ class PackagesManager(LinuxSessionManager):
         if self._prefetch_activated == True:
             self._prefetch_activated = False
         handler.success(request)
+    
+    def _silent_remove(self, packages):
+        result = []
+        def resolve_package(i, p_id, summary):
+            result.append(str(p_id))
+        def resolve_finished(exit, runtime):
+            if exit == 'success' and len(result):
+                t_r = Transaction(None, None)
+                t_r._s_Finished = None
+                t_r._s_Changed = None
+                t_r.run('RemovePackages', result, False, True)
+        t = Transaction(None, None)
+        t._s_Package = resolve_package
+        t._s_Finished = resolve_finished
+        t._s_Changed = None
+        t.run('Resolve', 'none', packages)
     
     def _silent_refresh_cache(self, callback=None):
         log.msg('Running a silent RefreshCache')
