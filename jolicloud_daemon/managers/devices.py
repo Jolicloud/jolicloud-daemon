@@ -39,7 +39,7 @@ class DevicesManager(LinuxSessionManager):
         def reply_handler(udi, properties):
             properties = self._parse_volume_properties(properties)
             if properties:
-                self.emit('device_added',{
+                self.emit('device_added', {
                     'udi': udi,
                     'properties': properties
                 })
@@ -62,7 +62,7 @@ class DevicesManager(LinuxSessionManager):
         def reply_handler(udi, properties):
             parsed_properties = self._parse_volume_properties(properties)
             if parsed_properties:
-                self.emit('device_changed',{
+                self.emit('device_changed', {
                     'udi': udi,
                     'properties': parsed_properties
                 })
