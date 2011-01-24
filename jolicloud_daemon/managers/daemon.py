@@ -38,15 +38,11 @@ class DaemonManager(LinuxSessionManager):
         return False
     
     def version(self, request, handler):
-        return '1.1.20'
+        return '1.2'
     
     def computer(self, request, handler):
         # Returns uuid, password and oem
-        retval = {
-            'settings': {
-                'autologin': True
-            }
-        }
+        retval = {}
         # OEM
         try:
             cp = SafeConfigParser()
