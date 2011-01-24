@@ -109,14 +109,14 @@ class JolicloudWSHandler(WebSocketHandler):
             response['method'] = request.meta_handler
         if message:
             response['params']['message'] += " %s" % message
-        self.transport.write('\n' + json.dumps(response) + '\n')
+        self.transport.write(json.dumps(response))
         
     def send_data(self, request, params):
         response = {
             'params' : params,
             'method' : request.handler
         }
-        self.transport.write('\n' + json.dumps(response) + '\n')
+        self.transport.write(json.dumps(response))
         
     def success(self, request):
         self.send_meta(OPERATION_SUCCESSFUL, request)
