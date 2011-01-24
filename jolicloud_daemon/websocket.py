@@ -258,7 +258,7 @@ class WebSocketRequest(Request):
             # XXX we probably don't want to set _transferDecoder
             self.channel._transferDecoder = WebSocketFrameDecoder(
                 self, handler)
-            transport._connectionMade()
+            handler.transport._connectionMade()
             return
 
 
@@ -360,7 +360,7 @@ class WebSocketTransport(object):
         """
         Send a sequence of frames to the connected client.
         """
-        self._request.write("".join(["\x00%s\xff" % f for f in frame]))
+        self._request.write("".join(["\x00%s\xff" % f for f in frames]))
 
     def loseConnection(self):
         """
