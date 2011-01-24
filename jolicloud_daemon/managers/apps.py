@@ -4,6 +4,8 @@ __author__ = 'Jeremy Bethmont'
 
 import os
 import shlex
+import time
+import wnck
 
 from twisted.internet import reactor, protocol
 from twisted.web.client import downloadPage
@@ -22,18 +24,33 @@ except ImportError:
 class AppsManager(LinuxSessionManager):
     
     # http://my.jolicloud.com/api/apps/index?featured=true&sort=oemvye&page=1&per_page=10
-    
+
+    def __init__(self):
+        self.screen = wnck.screen_get_default()
+        self._launched_apps = {}
+
     def launch(self, request, handler, command):
+        if command in self._launched_apps:
+            for window in self.screen.get_windows():
+                if window.get_pid() == self._launched_apps[command]:
+                    log.msg('Activating window: %s' % window.get_name())
+                    window.activate(int(time.time()))
+                    return handler.success(request)
         for flag in 'UuFfDdNnickvm':
             command = command.replace('%%%s' % flag, '')
         command = command.replace('~', os.getenv('HOME')) # Is it really necessary ?
         splited_command = shlex.split(str(command)) # The shlex module currently does not support Unicode input.
-        reactor.spawnProcess(
-            protocol.ProcessProtocol(),
+        pp = protocol.ProcessProtocol()
+        def process_ended(status_code):
+            del self._launched_apps[command]
+        pp.processEnded = process_ended
+        f = reactor.spawnProcess(
+            pp,
             '/usr/bin/setsid', # setsid - run a program in a new session
             ['setsid'] + splited_command,
             env=os.environ
         )
+        self._launched_apps[command] = f.pid
         handler.success(request)
     
     def launch_webapp(self, request, handler, package, url, icon_url):
