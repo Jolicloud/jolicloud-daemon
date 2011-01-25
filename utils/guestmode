@@ -17,14 +17,14 @@ elif [ "${args[0]}" = "enable" ]; then
 	echo "login_guest_cmd exec /bin/bash -login /usr/share/jolicloud-guestlogin/start-session %session" >> $slim_conf
 	pam-auth-update --package
     fi
-    exit $!
+    exit $?
 elif [ "${args[0]}" = "disable" ]; then
     sed -ibackup -r \
         -e "/^#?guest_group.*\$/d" \
         -e "/^#?login_guest_cmd.*\$/d" \
         $slim_conf
     pam-auth-update --remove guestlogin
-    exit $!
+    exit $?
 fi
 
 exit 42

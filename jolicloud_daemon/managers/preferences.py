@@ -38,7 +38,7 @@ class PreferencesManager(LinuxSessionManager):
         
         args = [action.encode('utf-8')]
         if action == 'enable':
-            args.append(os.getlogin())
+            args.append(os.getenv('USER'))
         
         class GetProcessOutput(protocol.ProcessProtocol):
             out = ''
@@ -75,7 +75,7 @@ class PreferencesManager(LinuxSessionManager):
             def outReceived(self, data):
                 self.out += data
             def errReceived(self, data):
-                log.msg("[utils/autologin] [stderr] %s" % data)
+                log.msg("[utils/guestmode] [stderr] %s" % data)
             def processEnded(self, status_object):
                 if status_object.value.exitCode != 0:
                     return handler.failed(request)

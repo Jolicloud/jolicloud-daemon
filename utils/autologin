@@ -15,13 +15,13 @@ elif [ "${args[0]}" = "enable" -a -n "${args[1]}" ]; then
         -e "s/^#?auto_login.*\$/auto_login    yes/" \
         -e "s/^#?default_user.*\$/default_user    ${args[1]}/" \
         $slim_conf
-    exit $!
+    exit $?
 elif [ "${args[0]}" = "disable" ]; then
     sed -ibackup -r \
         -e "s/^#?auto_login.*\$/auto_login    no/" \
         -e "s/^#?default_user.*\$/#default_user    simone/" \
         $slim_conf
-    exit $!
+    exit $?
 fi
 
 exit 42
