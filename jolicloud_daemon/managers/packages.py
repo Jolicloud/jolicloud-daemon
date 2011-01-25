@@ -235,19 +235,20 @@ class PackagesManager(LinuxSessionManager):
                     if exit == 'success':
                         if not len(gu_result):
                             self._prefetching = False
+                            log.msg('Nothing to prefetch')
                             self.emit('updates_ready', [])
-                            return log.msg('Nothing to prefetch')
+                            return
                         dp_transaction = Transaction(None, None)
                         def dp_finished(exit, runtime):
-                            self.emit('updates_ready', gu_result.values())
-                            log.msg('Prefetch finished')
                             self._prefetching = False
+                            log.msg('Prefetch finished')
+                            self.emit('updates_ready', gu_result.values())
                         dp_transaction._s_Finished = dp_finished
                         dp_transaction._s_Changed = None
                         dp_transaction.run('DownloadPackages', gu_result.keys())
                     else:
-                        log.msg('Prefetch aborted')
                         self._prefetching = False
+                        log.msg('Prefetch aborted')
                 gu_transaction = Transaction(None, None)
                 gu_transaction._s_Package = gu_get_package
                 gu_transaction._s_Finished = gu_finished
