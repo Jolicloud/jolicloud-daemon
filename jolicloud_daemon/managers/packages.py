@@ -5,6 +5,7 @@ __author__ = 'Jeremy Bethmont'
 import os
 import dbus
 import shutil
+import grp
 
 from functools import partial
 
@@ -167,15 +168,22 @@ class PackagesManager(LinuxSessionManager):
     _upgrading = False
     _installing_or_removing = False
     _prefetch_activated = False
-    _prefetch_interval = 300
+    _prefetch_interval = 900
     _prefetch_force = False
     _transactions = {}
     
     _refresh_cache_needed = False
     
+    _groups = []
+    
     events = ['updates_ready']
     
     def __init__(self):
+        for group_id in os.getgroups():
+            self._groups.append(grp.getgrgid(group_id).gr_name)
+        # Guest and live session.
+        self._has_permissions = 'admin' in self._groups and os.getuid() != 999
+        
         self._check_refresh_cache_needed()
     
     def _on_cellular_network(self):
@@ -302,6 +310,8 @@ class PackagesManager(LinuxSessionManager):
                 log.msg('Icon saved: ~/.local/share/icons/%s.png' % package)
             downloadPage(str(icon_url), path, timeout=30).addCallback(download_callback)
             return {'status': 'finished'}
+        if not self._has_permissions:
+            return handler.send_meta(PERMISSION_DENIED, request)
         if self._refresh_cache_needed == True:
             self._silent_refresh_cache(partial(self.install, request, handler, package, icon_url))
             return
@@ -313,6 +323,8 @@ class PackagesManager(LinuxSessionManager):
             if os.path.exists(path):
                 os.unlink(path)
             return {'status': 'finished'}
+        if not self._has_permissions:
+            return handler.send_meta(PERMISSION_DENIED, request)
         if package == 'nickel-codecs-ffmpeg-nonfree':
             return self._install_remove('InstallPackages', request, handler, 'nickel-codecs-ffmpeg')
         self._install_remove('RemovePackages', request, handler, package)
@@ -395,10 +407,14 @@ class PackagesManager(LinuxSessionManager):
         )
     
     def check_updates(self, request, handler, force_reload=True):
+        if not self._has_permissions:
+            return handler.send_meta(PERMISSION_DENIED, request)
         t = Transaction(request, handler)
         t.run('RefreshCache', force_reload)
     
     def list_updates(self, request, handler):
+        if not self._has_permissions:
+            return handler.send_meta(PERMISSION_DENIED, request)
         result = {}
         def get_package(info, package_id, summary):
             result[str(package_id)] = {
@@ -421,6 +437,8 @@ class PackagesManager(LinuxSessionManager):
         t.run('GetUpdates', 'installed')
 
     def perform_updates(self, request, handler):
+        if not self._has_permissions:
+            return handler.send_meta(PERMISSION_DENIED, request)
         if self._refresh_cache_needed == True:
             self._silent_refresh_cache(partial(self.perform_updates, request, handler))
             return
@@ -436,7 +454,9 @@ class PackagesManager(LinuxSessionManager):
         t._s_Finished = finished
         t.run('UpdateSystem', False)
     
-    def start_prefetch(self, request, handler, delay=300, interval=300, force=False):
+    def start_prefetch(self, request, handler, delay=300, interval=900, force=False):
+        if not self._has_permissions:
+            return handler.send_meta(PERMISSION_DENIED, request)
         if self._prefetch_activated == False:
             self._prefetch_activated = True
             self._prefetch_interval = interval
@@ -445,6 +465,8 @@ class PackagesManager(LinuxSessionManager):
         handler.success(request)
     
     def stop_prefetch(self, request, handler):
+        if not self._has_permissions:
+            return handler.send_meta(PERMISSION_DENIED, request)
         if self._prefetch_activated == True:
             self._prefetch_activated = False
         handler.success(request)

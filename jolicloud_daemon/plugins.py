@@ -13,7 +13,7 @@ class Manager(object):
     def register(self, request, handler, event):
         event_name = event.split('/')[1]
         if event_name not in self.events:
-            return handler.send_meta(UNKNOWN_EVENT, request)
+            return handler.send_meta(EVENT_UNAVAILABLE, request)
 
         handler_name = request.handler
         
@@ -28,7 +28,7 @@ class Manager(object):
     def unregister(self, request, handler, event):
         event_name = event.split('/')[1]
         if event_name not in self.events:
-            return handler.send_meta(UNKNOWN_EVENT, request)
+            return handler.send_meta(EVENT_UNAVAILABLE, request)
 
         handler_name = request.handler
         

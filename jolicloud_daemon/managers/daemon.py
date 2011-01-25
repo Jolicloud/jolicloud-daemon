@@ -70,11 +70,15 @@ class DaemonManager(LinuxSessionManager):
                     pass
                 handler.send_data(request, retval)
                 handler.success(request)
-        reactor.spawnProcess(
-            GetProcessOutput(),
-            '/usr/bin/pkexec',
-            ['pkexec', '/usr/lib/jolicloud-daemon/utils/uuid']
-        )
+        if os.getuid() != self._OEM_USER_ID and os.getenv('LOGNAME') != self._OEM_USER_LOGNAME:
+            reactor.spawnProcess(
+                GetProcessOutput(),
+                '/usr/bin/pkexec',
+                ['pkexec', '/usr/lib/jolicloud-daemon/utils/uuid']
+            )
+        else:
+            handler.send_data(request, retval)
+            handler.success(request)
 
     def kill_nickel(self, request, handler):
         handler.success(request)

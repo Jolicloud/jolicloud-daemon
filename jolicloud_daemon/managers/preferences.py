@@ -38,7 +38,7 @@ class PreferencesManager(LinuxSessionManager):
         
         args = [action.encode('utf-8')]
         if action == 'enable':
-            args.append(os.getenv('USER'))
+            args.append(os.getenv('LOGNAME')) # See http://docs.python.org/library/os.html#os.getlogin
         
         class GetProcessOutput(protocol.ProcessProtocol):
             out = ''
