@@ -306,7 +306,7 @@ class PackagesManager(LinuxSessionManager):
     def install(self, request, handler, package, icon_url=None):
         if package.startswith('jolicloud-webapp-'):
             icon_base_path = '%s/.local/share/icons' % os.getenv('HOME')
-            icon_path = os.path.join(icon_base_path, package)
+            icon_path = os.path.join(icon_base_path, '%s.png' % package)
             if not os.path.exists(icon_base_path):
                 os.makedirs(icon_base_path)
             # We copy the default icon first, in case we can't download the real icon

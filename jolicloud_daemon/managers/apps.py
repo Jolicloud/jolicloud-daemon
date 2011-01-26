@@ -61,7 +61,7 @@ class AppsManager(LinuxSessionManager):
             os.makedirs(icon_base_path)
         downloadPage(
             str(icon_url),
-            os.path.join(icon_base_path, package),
+            os.path.join(icon_base_path, '%s.png' % package),
             timeout=30
         ).addCallback(download_callback)
         if os.path.exists('/usr/bin/jolicloud-webapps-engine'):
