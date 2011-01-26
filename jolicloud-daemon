@@ -33,6 +33,12 @@ parser.add_option(
     dest='use_system',
     help='Use the standard configuration file for the systemwide daemon.'
 )
+parser.add_option(
+    '-p',
+    '--port',
+    dest='port',
+    help='Listen on the specified port. 804 by default for the systemwide daemon and 8004 for the per-login-session daemon.'
+)
 
 (options, args) = parser.parse_args()
 
@@ -49,6 +55,9 @@ if options.use_debug:
 os.environ.setdefault('JPD_SESSION', '1')
 if options.use_system:
     os.environ.setdefault('JPD_SYSTEM', '1')
+
+if options.port:
+    os.environ.setdefault('JPD_PORT', options.port)
 
 from jolicloud_daemon.main import start
 

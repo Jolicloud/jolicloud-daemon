@@ -218,14 +218,16 @@ def start():
         except ImportError:
             log_path = os.path.join(os.getenv('HOME'), '.local', 'share', 'Jolicloud', 'jolicloud-daemon')
     
+    port = int(os.environ.get('JPD_PORT', 804 if os.environ.get('JPD_SYSTEM', None) else 8004))
+    
     # http://twistedmatrix.com/documents/9.0.0/web/howto/using-twistedweb.html#auto5
     if os.environ.get('JPD_DEBUG', '0') == '1':
         log.startLogging(sys.stdout)
         log.startLogging(LogFile('jolicloud-daemon.log', log_path, maxRotatedFiles=2))
-        reactor.listenTCP(8004, site)
+        reactor.listenTCP(port, site)
     else:
         log.startLogging(LogFile('jolicloud-daemon.log', log_path, maxRotatedFiles=2))
-        reactor.listenTCP(8004, site, interface='127.0.0.1')
+        reactor.listenTCP(port, site, interface='127.0.0.1')
     # TODO, use random port for session daemon
     
     # We load the plugins:
