@@ -56,9 +56,12 @@ class AppsManager(LinuxSessionManager):
     def launch_webapp(self, request, handler, package, url, icon_url):
         def download_callback(result):
             log.msg('Icon saved: ~/.local/share/icons/%s.png' % package)
+        icon_base_path = '%s/.local/share/icons' % os.getenv('HOME')
+        if not os.path.exists(icon_base_path):
+            os.makedirs(icon_base_path)
         downloadPage(
             str(icon_url),
-            '%s/.local/share/icons/%s.png' % (os.getenv('HOME'), package),
+            os.path.join(icon_base_path, package),
             timeout=30
         ).addCallback(download_callback)
         if os.path.exists('/usr/bin/jolicloud-webapps-engine'):

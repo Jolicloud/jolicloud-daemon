@@ -305,12 +305,15 @@ class PackagesManager(LinuxSessionManager):
       
     def install(self, request, handler, package, icon_url=None):
         if package.startswith('jolicloud-webapp-'):
-            path = '%s/.local/share/icons/%s.png' % (os.getenv('HOME'), package)
+            icon_base_path = '%s/.local/share/icons' % os.getenv('HOME')
+            icon_path = os.path.join(icon_base_path, package)
+            if not os.path.exists(icon_base_path):
+                os.makedirs(icon_base_path)
             # We copy the default icon first, in case we can't download the real icon
-            shutil.copy('%sjolicloud-webapp-default.png' % os.environ['JPD_ICONS_PATH'], path)
+            shutil.copy('%sjolicloud-webapp-default.png' % os.environ['JPD_ICONS_PATH'], icon_path)
             def download_callback(result):
                 log.msg('Icon saved: ~/.local/share/icons/%s.png' % package)
-            downloadPage(str(icon_url), path, timeout=30).addCallback(download_callback)
+            downloadPage(str(icon_url), icon_path, timeout=30).addCallback(download_callback)
             return {'status': 'finished'}
         if not self._has_permissions:
             return handler.send_meta(PERMISSION_DENIED, request)
