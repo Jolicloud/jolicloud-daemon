@@ -7,6 +7,7 @@ import dbus
 import shutil
 import grp
 
+from urlparse import urlparse
 from functools import partial
 
 from twisted.python import log
@@ -504,9 +505,9 @@ class PackagesManager(LinuxSessionManager):
         def repodetail(repo_id, description, enabled):
             source = description.split(' ')[2]
             if enabled and source.startswith('http'):
-                host = source.split('/')[2]
-                if host not in hosts:
-                    hosts.append(host)
+                o = urlparse(source)
+                if o.hostname and o.hostname not in hosts:
+                    hosts.append(o.hostname)
         def finished(exit, runtime):
             self._refresh_cache_needed = False
             for host in hosts:
@@ -516,8 +517,9 @@ class PackagesManager(LinuxSessionManager):
                         found = True
                         break
                 if found == False:
-                    log.msg('It seems we need to run a RefreshCache.')
                     self._refresh_cache_needed = True
+                    log.msg('It seems we need to run a RefreshCache.')
+                    return
         t = Transaction(None, None)
         t._s_RepoDetail = repodetail
         t._s_Finished = finished
