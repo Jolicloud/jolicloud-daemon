@@ -183,7 +183,7 @@ class PackagesManager(LinuxSessionManager):
         for group_id in os.getgroups():
             self._groups.append(grp.getgrgid(group_id).gr_name)
         # Guest and live session.
-        self._has_permissions = 'admin' in self._groups and os.getuid() != 999
+        self._has_permissions = 'admin' in self._groups and 'guests' not in self._groups and os.getuid() != 999
         
         self._check_refresh_cache_needed()
     
