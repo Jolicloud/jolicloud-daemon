@@ -459,7 +459,7 @@ class PackagesManager(LinuxSessionManager):
         t._s_Finished = finished
         t.run('UpdateSystem', False)
     
-    def start_prefetch(self, request, handler, delay=300, interval=900, force=False):
+    def start_prefetch(self, request, handler, delay=30, interval=900, force=False):
         if not self._has_permissions:
             return handler.send_meta(PERMISSION_DENIED, request)
         if self._prefetch_activated == False:
