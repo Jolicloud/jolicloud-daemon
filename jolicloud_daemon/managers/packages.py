@@ -389,17 +389,18 @@ class PackagesManager(LinuxSessionManager):
                             else:
                                 res.append({'name': p})
                 # We add webapps and remove the legacy packages
+                dst_path = '%s/.local/share/icons' % os.getenv('HOME')
+                if not os.path.exists(dst_path):
+                    os.makedirs(dst_path)
                 if len(webapps_to_be_deleted):
                     log.msg('Deleting legacy webapps packages: %s' % webapps_to_be_deleted)
                     for webapp in webapps_to_be_deleted:
                         src = '/usr/share/pixmaps/%s.png' % webapp
                         dst = '%s/.local/share/icons/%s.png' % (os.getenv('HOME'), webapp)
                         log.msg('Copying icon %s to %s.' % (src, dst))
-                        if not os.path.exists(os.path.dirname(dst)):
-                            os.makedirs(os.path.dirname(dst))
                         shutil.copy(src, dst)
                     _silent_remove(webapps_to_be_deleted)
-                for icon in os.listdir('%s/.local/share/icons' % os.getenv('HOME')):
+                for icon in os.listdir(dst_path):
                     if icon.startswith('jolicloud-webapp-'):
                         res.append({'name': icon.split('.')[0]})
                 handler.send_data(request, res)
