@@ -107,12 +107,36 @@ class DevicesManager(LinuxSessionManager):
             if mount_point == '/':
                 label = 'Jolicloud'
             return {
+                # Old API
                 'volume.label': label or dev_props['IdLabel'] or dev_props['IdUuid'],
                 'volume.model': dev_props['DriveModel'],
                 'volume.is_disc': dev_props['DriveIsMediaEjectable'],
                 'volume.mount_point': mount_point,
                 'volume.size': dev_props['PartitionSize'],
                 'volume.size_free': size_free,
+                
+                # New API matching org.freedesktop.UDisks
+                
+                # Id / Label / Model
+                'IdLabel': dev_props['IdLabel'],
+                'IdUuid': dev_props['IdUuid'],
+                'DriveModel': dev_props['DriveModel'],
+                
+                # Partition
+                'PartitionSize': dev_props['PartitionSize'],
+                
+                # Optical Disc
+                'OpticalDiscNumAudioTracks': dev_props['OpticalDiscNumAudioTracks'],
+                'OpticalDiscNumSessions': dev_props['OpticalDiscNumSessions'],
+                'OpticalDiscNumTracks': dev_props['OpticalDiscNumTracks'],
+                
+                # Drive
+                'DriveIsMediaEjectable': dev_props['DriveIsMediaEjectable'],
+                
+                # Device
+                'DeviceIsMediaAvailable': dev_props['DeviceIsMediaAvailable'],
+                'DeviceIsMounted': dev_props['DeviceIsMounted'],
+                'DeviceMountPaths': dev_props['DeviceMountPaths'],
             }
     
     def volumes(self, request, handler):
