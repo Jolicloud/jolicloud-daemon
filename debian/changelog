@@ -1,3 +1,9 @@
+jolicloud-daemon (1.2) robby; urgency=low
+
+  * Full rewrite of jolicloud-daemon using Twisted.
+
+ -- Jérémy Bethmont <jerem@jolicloud.org>  Fri, 28 Jan 2011 14:21:18 +0100
+
 jolicloud-pkg-daemon (1.1.0) robby; urgency=low
 
   * Updated dependencies.
