@@ -67,8 +67,13 @@ class PreferencesManager(LinuxSessionManager):
             return handler.failed(request) # TODO: Wrong params
         
         args = [action.encode('utf-8')]
-#        if action == 'enable':
-#            args.append(os.getlogin())
+        if action == 'enable':
+            reactor.spawnProcess(
+                protocol.ProcessProtocol(),
+                '/usr/bin/pkexec',
+                ['pkexec', '/usr/lib/jolicloud-daemon/utils/migrate-nm-connections'],
+                env=os.environ
+            )
         
         class GetProcessOutput(protocol.ProcessProtocol):
             out = ''

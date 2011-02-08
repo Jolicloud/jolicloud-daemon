@@ -25,3 +25,17 @@ Action=org.jolicloud.uuid
 ResultAny=no
 ResultInactive=no
 ResultActive=yes
+
+[NetworkManager]
+Identity=unix-group:admin
+Action=org.freedesktop.network-manager-settings.system.modify
+ResultAny=no
+ResultInactive=no
+ResultActive=yes
+
+[Jolicloud NetworkManager connections migration]
+Identity=unix-group:admin
+Action=org.jolicloud.migrate-nm-connections
+ResultAny=no
+ResultInactive=no
+ResultActive=yes

@@ -1,27 +1,33 @@
-#!/bin/bash
+#!/usr/bin/env python
 
-slim_conf=/etc/slim.conf
-args=("$@")
+import os
+import sys
+import ConfigParser
 
-if [ "${args[0]}" = "status" ]; then
-    if STATUS=`egrep "^auto_login\s*yes\$" "$slim_conf"`; then
-        echo "enabled"
-    else
-        echo "disabled"
-    fi
-    exit 0
-elif [ "${args[0]}" = "enable" -a -n "${args[1]}" ]; then
-    sed -ibackup -r \
-        -e "s/^#?auto_login.*\$/auto_login    yes/" \
-        -e "s/^#?default_user.*\$/default_user    ${args[1]}/" \
-        $slim_conf
-    exit $?
-elif [ "${args[0]}" = "disable" ]; then
-    sed -ibackup -r \
-        -e "s/^#?auto_login.*\$/auto_login    no/" \
-        -e "s/^#?default_user.*\$/#default_user    simone/" \
-        $slim_conf
-    exit $?
-fi
+config_file = '/etc/jolicloud-displaymanager/99jolicloud-autologin'
 
-exit 42
+config = ConfigParser.RawConfigParser()
+if os.path.exists(config_file):
+    config.read(config_file)
+    
+if sys.argv[1] == 'status':
+    if config.has_section('autologin') and config.getboolean('autologin', 'enabled') == True:
+        print 'enabled'
+    else:
+        print 'disabled'
+    exit(0)
+elif sys.argv[1] == 'enable' and len(sys.argv[2]):
+    if not config.has_section('autologin'):
+        config.add_section('autologin')
+    config.set('autologin', 'enabled', True)
+    config.set('autologin', 'login', sys.argv[2])
+    config.write(open(config_file, 'w'))
+    exit(0)
+elif sys.argv[1] == 'disable':
+    if not config.has_section('autologin'):
+        config.add_section('autologin')
+    config.set('autologin', 'enabled', False)
+    config.write(open(config_file, 'w'))
+    exit(0)
+
+exit(42)
