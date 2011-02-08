@@ -6,6 +6,7 @@ import os
 import shlex
 import time
 import wnck
+import grp
 
 from twisted.internet import reactor, protocol
 from twisted.web.client import downloadPage
@@ -28,6 +29,18 @@ class AppsManager(LinuxSessionManager):
     def __init__(self):
         self.screen = wnck.screen_get_default()
         self._launched_apps = {}
+
+    def _is_guest(self):
+        for group in os.getgroups():
+            if grp.getgrgid(group).gr_name == 'guests':
+                return True
+        return False
+
+    def _is_live(self):
+        for group in os.getgroups():
+            if group == os.getuid() == 999 and grp.getgrgid(group).gr_name == os.getenv('LOGNAME') == 'jolicloud':
+                return True
+        return False
 
     def launch(self, request, handler, command):
         if command in self._launched_apps:
@@ -64,10 +77,13 @@ class AppsManager(LinuxSessionManager):
             os.path.join(icon_base_path, '%s.png' % package),
             timeout=30
         ).addCallback(download_callback)
+        args = ''
+        if self._is_guest() and self._is_live():
+            args += ' --incognito'
         if os.path.exists('/usr/bin/jolicloud-webapps-engine'):
-            self.launch(request, handler, 'jolicloud-webapps-engine --app=%s --icon-id=%s' % (str(url), str(package)))
+            self.launch(request, handler, 'jolicloud-webapps-engine --app=%s --icon-id=%s' + args % (str(url), str(package)))
         else:
-            self.launch(request, handler, 'google-chrome --app=%s' % str(url))
+            self.launch(request, handler, 'google-chrome --app=%s' + args % str(url))
     
     def launch_desktop(self, request, handler, desktop):
         entry = DesktopEntry()
