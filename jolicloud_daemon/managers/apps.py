@@ -78,12 +78,12 @@ class AppsManager(LinuxSessionManager):
             timeout=30
         ).addCallback(download_callback)
         args = ''
-        if self._is_guest() and self._is_live():
-            args += ' --incognito'
+        if self._is_guest() or self._is_live():
+            args = '--incognito'
         if os.path.exists('/usr/bin/jolicloud-webapps-engine'):
-            self.launch(request, handler, 'jolicloud-webapps-engine --app=%s --icon-id=%s' + args % (str(url), str(package)))
+            self.launch(request, handler, 'jolicloud-webapps-engine %s --app=%s --icon-id=%s' % (args, str(url), str(package)))
         else:
-            self.launch(request, handler, 'google-chrome --app=%s' + args % str(url))
+            self.launch(request, handler, 'google-chrome %s --app=%s' % (args, str(url)))
     
     def launch_desktop(self, request, handler, desktop):
         entry = DesktopEntry()
