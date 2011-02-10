@@ -34,7 +34,7 @@ class FilesystemManager(LinuxSessionManager):
                     'path': format_path(file.get_path()),
                     'modified': datetime.fromtimestamp(info.get_modification_time()).strftime('%a, %d %b %Y %H:%M:%S %Z'),
                     'mime_type': info.get_content_type(),
-                    'thumbnail': False,
+                    'thumbnail': True if len(info.get_attribute_as_string('thumbnail::path')) else False,
                 }
                 if info.get_file_type() == gio.FILE_TYPE_DIRECTORY:
                     result['is_dir'] = True
@@ -47,12 +47,13 @@ class FilesystemManager(LinuxSessionManager):
                             path = c_file.get_child(name).get_path()
                             if not name.startswith('.'):
                                 result['contents'].append({
+                                    'root': vanilla_root,
                                     'path': format_path(path),
                                     'modified': datetime.fromtimestamp(c_info.get_modification_time()).strftime('%a, %d %b %Y %H:%M:%S %Z'),
                                     'is_dir': c_info.get_file_type() == gio.FILE_TYPE_DIRECTORY,
                                     'bytes': c_info.get_size(),
                                     'mime_type': c_info.get_content_type(),
-                                    'thumbnail': False,
+                                    'thumbnail': True if len(c_info.get_attribute_as_string('thumbnail::path')) else False,
                                 })
                         handler.send_data(request, result)
                         handler.success(request)
@@ -80,6 +81,19 @@ class FilesystemManager(LinuxSessionManager):
             env=os.environ
         )
         handler.success(request)
-            
+    
+#    def thumbnail(self, request, handler, path='/', root='home'):
+#        
+#        if root == 'home' or root == 'HOME':
+#            root = os.getenv('HOME')
+#        
+#        def info_cb(file, result):
+#            try:
+#                info = file.query_info_finish(result)
+#            except gio.Error, e: # Path does not exist?
+#                handler.failed(request)
+#        
+#        current = gio.File('%s/%s' % (root, path.strip('/')))
+#        current.query_info_async('thumbnail::path', callback=info_cb)
         
 filesystemManager = FilesystemManager()
