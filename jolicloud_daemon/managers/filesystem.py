@@ -4,13 +4,41 @@ __author__ = 'Jeremy Bethmont'
 
 import gio
 import os
+import sys
+import base64
 
 from datetime import datetime
 
-from twisted.internet import reactor, protocol
+from twisted.internet import reactor, protocol, defer
 
 from jolicloud_daemon.plugins import LinuxSessionManager
 from jolicloud_daemon.enums import *
+
+# http://blogs.gnome.org/jamesh/2009/01/06/twisted-gio/
+def file_read_deferred(file, io_priority=0, cancellable=None):
+    d = defer.Deferred()
+    def callback(file, async_result):
+        try:
+            in_stream = file.read_finish(async_result)
+        except gio.Error:
+            d.errback()
+        else:
+            d.callback(in_stream)
+    file.read_async(callback, io_priority, cancellable)
+    return d
+
+def input_stream_read_deferred(in_stream, count, io_priority=0, cancellable=None):
+    d = defer.Deferred()
+    def callback(in_stream, async_result):
+        try:
+            bytes = in_stream.read_finish(async_result)
+        except gio.Error:
+            d.errback()
+        else:
+            d.callback(bytes)
+    # the argument order seems a bit weird here ...
+    in_stream.read_async(count, callback, io_priority, cancellable)
+    return d
 
 class FilesystemManager(LinuxSessionManager):
     
@@ -34,7 +62,7 @@ class FilesystemManager(LinuxSessionManager):
                     'path': format_path(file.get_path()),
                     'modified': datetime.fromtimestamp(info.get_modification_time()).strftime('%a, %d %b %Y %H:%M:%S %Z'),
                     'mime_type': info.get_content_type(),
-                    'thumbnail': True if len(info.get_attribute_as_string('thumbnail::path')) else False,
+                    'thumbnail': True if info.get_attribute_as_string('thumbnail::path') else False,
                 }
                 if info.get_file_type() == gio.FILE_TYPE_DIRECTORY:
                     result['is_dir'] = True
@@ -53,7 +81,7 @@ class FilesystemManager(LinuxSessionManager):
                                     'is_dir': c_info.get_file_type() == gio.FILE_TYPE_DIRECTORY,
                                     'bytes': c_info.get_size(),
                                     'mime_type': c_info.get_content_type(),
-                                    'thumbnail': True if len(c_info.get_attribute_as_string('thumbnail::path')) else False,
+                                    'thumbnail': True if c_info.get_attribute_as_string('thumbnail::path') else False,
                                 })
                         handler.send_data(request, result)
                         handler.success(request)
@@ -65,7 +93,7 @@ class FilesystemManager(LinuxSessionManager):
                     handler.success(request)
             except gio.Error, e: # Path does not exist?
                 handler.failed(request)
-        print '%s/%s' % (root, path.strip('/'))
+        
         current = gio.File('%s/%s' % (root, path.strip('/')))
         current.query_info_async(self._infos, callback=info_cb)
         
@@ -82,18 +110,56 @@ class FilesystemManager(LinuxSessionManager):
         )
         handler.success(request)
     
-#    def thumbnail(self, request, handler, path='/', root='home'):
-#        
-#        if root == 'home' or root == 'HOME':
-#            root = os.getenv('HOME')
-#        
-#        def info_cb(file, result):
-#            try:
-#                info = file.query_info_finish(result)
-#            except gio.Error, e: # Path does not exist?
-#                handler.failed(request)
-#        
-#        current = gio.File('%s/%s' % (root, path.strip('/')))
-#        current.query_info_async('thumbnail::path', callback=info_cb)
+    def account(self, request, handler, root='home'):
+    
+        if root == 'home' or root == 'HOME':
+            root = os.getenv('HOME')
+        
+        def info_cb(file, result):
+            try:
+                info = file.query_filesystem_info_finish(result)
+                result = {
+                    'quota': {
+                        'total': info.get_attribute_uint64('filesystem::size'),
+                        'available': info.get_attribute_uint64('filesystem::free')
+                    },
+                    'description': info.get_attribute_as_string('filesystem::type')
+                }
+                handler.send_data(request, result)
+                handler.success(request)
+            except gio.Error, e: # Path does not exist?
+                handler.failed(request)
+        
+        current = gio.File(root)
+        current.query_filesystem_info_async('filesystem::*', callback=info_cb)
+    
+    def thumbnail(self, request, handler, path='/', root='home'):
+        
+        if root == 'home' or root == 'HOME':
+            root = os.getenv('HOME')
+        
+        @defer.inlineCallbacks
+        def send_contents(file, cancellable=None):
+            result = ''
+            in_stream = yield file_read_deferred(file, cancellable=cancellable)
+            bytes = yield input_stream_read_deferred(in_stream, 4096, cancellable=cancellable)
+            while bytes:
+                result += bytes
+                bytes = yield input_stream_read_deferred(in_stream, 4096, cancellable=cancellable)
+            handler.send_data(request, 'data:image/png;base64,%s' % base64.b64encode(result))
+            handler.success(request)
+        
+        def info_cb(file, result):
+            try:
+                info = file.query_info_finish(result)
+                thumbnail_path = info.get_attribute_as_string('thumbnail::path')
+                send_contents(gio.File(thumbnail_path))
+            except gio.Error, e: # Path does not exist?
+                handler.failed(request)
+        
+        current = gio.File('%s/%s' % (root, path.strip('/')))
+        current.query_info_async('thumbnail::path,', callback=info_cb)
         
 filesystemManager = FilesystemManager()
+
+# quota -> total, available, system

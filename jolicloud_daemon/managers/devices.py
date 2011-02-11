@@ -29,9 +29,9 @@ class DevicesManager(LinuxSessionManager):
         self._udisks_iface.connect_to_signal('DeviceChanged', self._device_changed)
         self._udisks_iface.connect_to_signal('DeviceRemoved', self._device_removed)
     
-    def _get_size_free(self, mount_point):
+    def _get_size(self, mount_point):
         disk = os.statvfs(mount_point)
-        return disk.f_bsize * disk.f_bavail
+        return (disk.f_frsize * disk.f_blocks, disk.f_bsize * disk.f_bavail)
     
     def _device_added(self, path):
         log.msg('DEVICE ADDED %s' % path)
@@ -103,7 +103,7 @@ class DevicesManager(LinuxSessionManager):
                 label = dev_props['DriveModel']
             if dev_props['DeviceIsMounted']:
                 mount_point = dev_props['DeviceMountPaths'][0]
-                size_free = self._get_size_free(dev_props['DeviceMountPaths'][0])
+                size_free = self._get_size(dev_props['DeviceMountPaths'][0])[1]
             if mount_point == '/':
                 label = 'Jolicloud'
             return {
@@ -132,6 +132,7 @@ class DevicesManager(LinuxSessionManager):
                 
                 # Drive
                 'DriveIsMediaEjectable': dev_props['DriveIsMediaEjectable'],
+                'DriveCanDetach': dev_props['DriveCanDetach'],
                 
                 # Device
                 'DeviceIsMediaAvailable': dev_props['DeviceIsMediaAvailable'],
@@ -148,6 +149,30 @@ class DevicesManager(LinuxSessionManager):
                 'properties': self._parse_volume_properties(properties)
             })
             if len(result) == len(devices):
+                if os.path.exists('/host'):
+                    size = self._get_size('/host')
+                    result.append({
+                        'udi': '/org/jolicloud/daemon/devices/host',
+                        'properties': {
+                            # Old API
+                            'volume.label': 'Windows',
+                            'volume.model': 'MS Windows',
+                            'volume.is_disc': 0,
+                            'volume.mount_point': '/host',
+                            'volume.size': size[0],
+                            'volume.size_free': size[1],
+                            # New API matching org.freedesktop.UDisks
+                            'IdLabel': 'Windows',
+                            'IdUuid': 'MSWINDOWS',
+                            'DriveModel': 'MS Windows',
+                            'DriveIsMediaEjectable': 0,
+                            'DriveCanDetach': 0,
+                            'PartitionSize': size[0],
+                            'DeviceIsMediaAvailable': 0,
+                            'DeviceIsMounted': 1,
+                            'DeviceMountPaths': ['/host']
+                        }
+                    })
                 handler.send_data(request, [r for r in result if r['properties']])
                 handler.success(request)
         def error_handler(udi, error):
