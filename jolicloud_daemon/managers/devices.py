@@ -93,7 +93,7 @@ class DevicesManager(LinuxSessionManager):
 #        print 'DeviceIsOpticalDisc', dev_props['DeviceIsOpticalDisc']
 #        print 'DeviceIsMounted', dev_props['DeviceIsMounted']
 #        print 'DriveIsMediaEjectable', dev_props['DriveIsMediaEjectable']
-        if dev_props.get('IdUsage', '') == 'filesystem' and \
+        if dev_props['IdUsage'] == 'filesystem' and \
            not dev_props['DevicePresentationHide'] and \
            not dev_props['DeviceIsDrive'] or \
            dev_props['DriveIsMediaEjectable']:# or \
@@ -121,6 +121,8 @@ class DevicesManager(LinuxSessionManager):
                 'IdLabel': dev_props['IdLabel'],
                 'IdUuid': dev_props['IdUuid'],
                 'DriveModel': dev_props['DriveModel'],
+                'DriveVendor': dev_props['DriveVendor'],
+                'DisplayName': dev_props['IdLabel'] if dev_props['IdLabel'] else '%s %s' % (dev_props['DriveVendor'], dev_props['DriveModel']),
                 
                 # Partition
                 'PartitionSize': dev_props['PartitionSize'],
@@ -138,16 +140,27 @@ class DevicesManager(LinuxSessionManager):
                 'DeviceIsMediaAvailable': dev_props['DeviceIsMediaAvailable'],
                 'DeviceIsMounted': dev_props['DeviceIsMounted'],
                 'DeviceMountPaths': dev_props['DeviceMountPaths'],
+                'DeviceIsSystemInternal': dev_props['DeviceIsSystemInternal'],
             }
     
     def volumes(self, request, handler):
         result = []
         devices = self._udisks_iface.EnumerateDevices()
         def reply_handler(udi, properties):
+            parsed_properties = self._parse_volume_properties(properties)
             result.append({
                 'udi': udi,
-                'properties': self._parse_volume_properties(properties)
+                'properties': parsed_properties
             })
+            if parsed_properties and properties['IdUsage'] == 'filesystem' and properties['DeviceIsMounted'] == 0:
+                dev_iface = dbus.Interface(
+                    dbus.SystemBus().get_object('org.freedesktop.UDisks', udi),
+                    'org.freedesktop.UDisks.Device'
+                )
+                dev_iface.FilesystemMount(
+                    properties['IdType'],
+                    []
+                )
             if len(result) == len(devices):
                 if os.path.exists('/host'):
                     size = self._get_size('/host')
@@ -165,12 +178,14 @@ class DevicesManager(LinuxSessionManager):
                             'IdLabel': 'Windows',
                             'IdUuid': 'MSWINDOWS',
                             'DriveModel': 'MS Windows',
+                            'DisplayName': 'Windows',
                             'DriveIsMediaEjectable': 0,
                             'DriveCanDetach': 0,
                             'PartitionSize': size[0],
                             'DeviceIsMediaAvailable': 0,
                             'DeviceIsMounted': 1,
-                            'DeviceMountPaths': ['/host']
+                            'DeviceMountPaths': ['/host'],
+                            'DeviceIsSystemInternal': 1
                         }
                     })
                 handler.send_data(request, [r for r in result if r['properties']])

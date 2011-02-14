@@ -30,7 +30,7 @@ from twisted.internet import reactor
 from twisted.python import log
 from twisted.python.logfile import LogFile
 from twisted.internet.protocol import Protocol, Factory
-from twisted.web import resource, static, twcgi
+from twisted.web import resource, static, twcgi, script
 from twisted.web.server import Request
 from twisted.plugin import getPlugins
 
@@ -200,7 +200,10 @@ class JolicloudWSHandler(WebSocketHandler):
 
 def start():
     root = static.File(os.environ['JPD_HTDOCS_PATH'])
-    root.putChild("cgi-bin", twcgi.CGIDirectory(os.environ['JPD_HTDOCS_PATH'] + '/cgi-bin'))
+    root.processors = {
+        '.rpy': script.ResourceScript
+    }
+    root.putChild('cgi-bin', twcgi.CGIDirectory(os.environ['JPD_HTDOCS_PATH'] + '/cgi-bin'))
     site = JolicloudWSSite(root)
     
     site.addHandler('/jolicloud/', JolicloudWSHandler)

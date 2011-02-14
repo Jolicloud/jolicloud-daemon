@@ -2,14 +2,16 @@
 
 __author__ = 'Jeremy Bethmont'
 
-import gio
 import os
 import sys
 import base64
+import gio
 
 from datetime import datetime
 
-from twisted.internet import reactor, protocol, defer
+from gnome import ui
+
+from twisted.internet import reactor, protocol, defer, threads
 
 from jolicloud_daemon.plugins import LinuxSessionManager
 from jolicloud_daemon.enums import *
@@ -149,17 +151,32 @@ class FilesystemManager(LinuxSessionManager):
             handler.send_data(request, 'data:image/png;base64,%s' % base64.b64encode(result))
             handler.success(request)
         
+        def generate_thumbnail_blocking(file, info):
+            tf = ui.ThumbnailFactory(ui.THUMBNAIL_SIZE_NORMAL)
+            thumb = None
+            if tf.can_thumbnail(file.get_uri(), info.get_content_type(), info.get_modification_time()):
+                thumb = tf.generate_thumbnail(file.get_uri(), info.get_content_type())
+                if thumb:
+                    tf.save_thumbnail(thumb, file.get_uri(), info.get_modification_time())
+            return thumb
+        
         def info_cb(file, result):
             try:
                 info = file.query_info_finish(result)
                 thumbnail_path = info.get_attribute_as_string('thumbnail::path')
-                send_contents(gio.File(thumbnail_path))
+                
+                if thumbnail_path:
+                    send_contents(gio.File(thumbnail_path))
+                else:
+                    def get_thumb(thumb):
+                        if not thumb:
+                            return handler.failed(request)
+                        send_contents(gio.File(ui.thumbnail_path_for_uri(file.get_uri(), ui.THUMBNAIL_SIZE_NORMAL)))
+                    threads.deferToThread(generate_thumbnail_blocking, file, info).addCallback(get_thumb)
             except gio.Error, e: # Path does not exist?
                 handler.failed(request)
         
         current = gio.File('%s/%s' % (root, path.strip('/')))
-        current.query_info_async('thumbnail::path,', callback=info_cb)
+        current.query_info_async('standard::content-type,thumbnail::path,time::modified,standard::content-type', callback=info_cb)
         
 filesystemManager = FilesystemManager()
-
-# quota -> total, available, system
