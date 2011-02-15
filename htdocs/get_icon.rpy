@@ -40,9 +40,9 @@ def get_icon_blocking(request):
     entry = xdg.DesktopEntry.DesktopEntry()
     try:
         entry.parse(cgi.escape(request.args['desktop'][0]))
-    except:
+    except Exception, e:
         request.setHeader('Content-type', 'text/html')
-        request.write('error 2')
+        request.write('error 2<br/>%s' % e)
         request.finish()
     
     icon_name = entry.getIcon()
