@@ -57,6 +57,7 @@ class FilesystemManager(LinuxSessionManager):
             return f
         
         def info_cb(file, result):
+            tf = ui.ThumbnailFactory(ui.THUMBNAIL_SIZE_NORMAL)
             try:
                 info = file.query_info_finish(result)
                 result = {
@@ -64,7 +65,7 @@ class FilesystemManager(LinuxSessionManager):
                     'path': format_path(file.get_path()),
                     'modified': datetime.fromtimestamp(info.get_modification_time()).strftime('%a, %d %b %Y %H:%M:%S %Z'),
                     'mime_type': info.get_content_type(),
-                    'thumbnail': True if info.get_attribute_as_string('thumbnail::path') else False,
+                    'thumbnail': tf.can_thumbnail(file.get_uri(), info.get_content_type(), int(info.get_modification_time()))
                 }
                 if info.get_file_type() == gio.FILE_TYPE_DIRECTORY:
                     result['is_dir'] = True
@@ -83,7 +84,7 @@ class FilesystemManager(LinuxSessionManager):
                                     'is_dir': c_info.get_file_type() == gio.FILE_TYPE_DIRECTORY,
                                     'bytes': c_info.get_size(),
                                     'mime_type': c_info.get_content_type(),
-                                    'thumbnail': True if c_info.get_attribute_as_string('thumbnail::path') else False,
+                                    'thumbnail': tf.can_thumbnail(c_file.get_uri(), c_info.get_content_type(), int(c_info.get_modification_time()))
                                 })
                         handler.send_data(request, result)
                         handler.success(request)
