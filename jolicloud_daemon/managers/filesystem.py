@@ -154,10 +154,10 @@ class FilesystemManager(LinuxSessionManager):
         def generate_thumbnail_blocking(file, info):
             tf = ui.ThumbnailFactory(ui.THUMBNAIL_SIZE_NORMAL)
             thumb = None
-            if tf.can_thumbnail(file.get_uri(), info.get_content_type(), info.get_modification_time()):
+            if tf.can_thumbnail(file.get_uri(), info.get_content_type(), int(info.get_modification_time())):
                 thumb = tf.generate_thumbnail(file.get_uri(), info.get_content_type())
                 if thumb:
-                    tf.save_thumbnail(thumb, file.get_uri(), info.get_modification_time())
+                    tf.save_thumbnail(thumb, file.get_uri(), int(info.get_modification_time()))
             return thumb
         
         def info_cb(file, result):
