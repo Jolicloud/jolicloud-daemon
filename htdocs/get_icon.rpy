@@ -1,10 +1,5 @@
 #!/usr/bin/env python
 
-from twisted.web import server
-from twisted.web.resource import Resource
-from twisted.internet import reactor
-
-import cgi
 import os
 import sys
 import base64
@@ -13,6 +8,12 @@ import time
 import xdg.DesktopEntry
 import xdg.Menu
 import xdg.IconTheme
+
+from urllib import unquote
+
+from twisted.web import server
+from twisted.web.resource import Resource
+from twisted.internet import reactor
 
 weekdayname = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -39,7 +40,7 @@ def get_icon_blocking(request):
     
     entry = xdg.DesktopEntry.DesktopEntry()
     try:
-        entry.parse(cgi.escape(request.args['desktop'][0]))
+        entry.parse(unquote(request.args['desktop'][0]))
     except Exception, e:
         request.setHeader('Content-type', 'text/html')
         request.write('error 2<br/>%s' % e)

@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 import os
-import cgi
 import gio
+
+from urllib import unquote
 
 from gnome import ui
 
@@ -39,8 +40,8 @@ def input_stream_read_deferred(in_stream, count, io_priority=0, cancellable=None
 class ThumbnailResource(Resource):
     def render_GET(self, request):
         
-        path = cgi.escape(request.args.get('path', ['/'])[0])
-        root = cgi.escape(request.args.get('root', ['home'])[0])
+        path = unquote(request.args.get('path', ['/'])[0])
+        root = unquote(request.args.get('root', ['home'])[0])
         
         if root == 'home' or root == 'HOME':
             root = os.getenv('HOME')
