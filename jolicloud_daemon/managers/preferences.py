@@ -4,6 +4,7 @@ __author__ = 'Jeremy Bethmont'
 
 import os
 import grp
+import gconf
 
 from twisted.python import log
 from twisted.internet import reactor, protocol
@@ -17,14 +18,17 @@ class PreferencesManager(LinuxSessionManager):
     _groups = []
     
     def __init__(self):
-      for group_id in os.getgroups():
-         self._groups.append(grp.getgrgid(group_id).gr_name)
-      
-      if 'admin' in self._groups:
-         self._capabilities = [
-            'autologin',
-            'guestmode'
-         ]
+        self.gconf_client = gconf.client_get_default()
+        for group_id in os.getgroups():
+            self._groups.append(grp.getgrgid(group_id).gr_name)
+        
+        if 'admin' in self._groups:
+            self._capabilities = [
+                'autologin',
+                'guestmode',
+                'suspend_lock',
+                'hibernate_lock'
+            ]
     
     def capabilities(self, request, handler):
         return self._capabilities
@@ -40,6 +44,8 @@ class PreferencesManager(LinuxSessionManager):
         if action == 'enable':
             args.append(os.getenv('LOGNAME')) # See http://docs.python.org/library/os.html#os.getlogin
         
+        gconf_client = self.gconf_client
+        
         class GetProcessOutput(protocol.ProcessProtocol):
             out = ''
             def outReceived(self, data):
@@ -51,6 +57,12 @@ class PreferencesManager(LinuxSessionManager):
                     return handler.failed(request)
                 if action == 'status':
                     handler.send_data(request, self.out.strip())
+                elif action == 'enable':
+                    gconf_client.set_bool('/apps/gnome-power-manager/lock/suspend', False)
+                    gconf_client.set_bool('/apps/gnome-power-manager/lock/hibernate', False)
+                elif action == 'disable':
+                    gconf_client.set_bool('/apps/gnome-power-manager/lock/suspend', True)
+                    gconf_client.set_bool('/apps/gnome-power-manager/lock/hibernate', True)
                 handler.success(request)
         reactor.spawnProcess(
             GetProcessOutput(),
@@ -93,5 +105,33 @@ class PreferencesManager(LinuxSessionManager):
             ['pkexec', '/usr/lib/jolicloud-daemon/utils/guestmode'] + args,
             env=os.environ
         )
+    
+    def suspend_lock(self, request, handler, action='status'):
+        if action == 'status':
+            if self.gconf_client.get_bool('/apps/gnome-power-manager/lock/suspend'):
+               return 'enabled'
+            else:
+               return 'disabled'
+        if action == 'enable':
+            self.gconf_client.set_bool('/apps/gnome-power-manager/lock/suspend', True)
+        elif action == 'disable':
+            self.gconf_client.set_bool('/apps/gnome-power-manager/lock/suspend', False)
+        else:
+            return handler.failed(request)
+        handler.success(request)
+    
+    def hibernate_lock(self, request, handler, action='status'):
+        if action == 'status':
+            if self.gconf_client.get_bool('/apps/gnome-power-manager/lock/hibernate'):
+               return 'enabled'
+            else:
+               return 'disabled'
+        if action == 'enable':
+            self.gconf_client.set_bool('/apps/gnome-power-manager/lock/hibernate', True)
+        elif action == 'disable':
+            self.gconf_client.set_bool('/apps/gnome-power-manager/lock/hibernate', False)
+        else:
+            return handler.failed(request)
+        handler.success(request)
 
 preferencesManager = PreferencesManager()
