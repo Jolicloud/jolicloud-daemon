@@ -4,6 +4,7 @@ __author__ = 'Jeremy Bethmont'
 
 import os
 import grp
+import gconf
 
 from twisted.python import log
 from twisted.internet import reactor, protocol
@@ -17,14 +18,14 @@ class PreferencesManager(LinuxSessionManager):
     _groups = []
     
     def __init__(self):
-      for group_id in os.getgroups():
-         self._groups.append(grp.getgrgid(group_id).gr_name)
-      
-      if 'admin' in self._groups:
-         self._capabilities = [
-            'autologin',
-            'guestmode'
-         ]
+        self.gconf_client = gconf.client_get_default()
+        for group_id in os.getgroups():
+            self._groups.append(grp.getgrgid(group_id).gr_name)
+        
+        self._capabilities = ['suspend_lock', 'hibernate_lock']
+        if 'admin' in self._groups:
+            self._capabilities.append('autologin')
+            self._capabilities.append('guestmode')
     
     def capabilities(self, request, handler):
         return self._capabilities
@@ -93,5 +94,33 @@ class PreferencesManager(LinuxSessionManager):
             ['pkexec', '/usr/lib/jolicloud-daemon/utils/guestmode'] + args,
             env=os.environ
         )
+    
+    def suspend_lock(self, request, handler, action='status'):
+        if action == 'status':
+            if self.gconf_client.get_bool('/apps/gnome-power-manager/lock/suspend'):
+               return 'enabled'
+            else:
+               return 'disabled'
+        if action == 'enable':
+            self.gconf_client.set_bool('/apps/gnome-power-manager/lock/suspend', True)
+        elif action == 'disable':
+            self.gconf_client.set_bool('/apps/gnome-power-manager/lock/suspend', False)
+        else:
+            return handler.failed(request)
+        handler.success(request)
+    
+    def hibernate_lock(self, request, handler, action='status'):
+        if action == 'status':
+            if self.gconf_client.get_bool('/apps/gnome-power-manager/lock/hibernate'):
+               return 'enabled'
+            else:
+               return 'disabled'
+        if action == 'enable':
+            self.gconf_client.set_bool('/apps/gnome-power-manager/lock/hibernate', True)
+        elif action == 'disable':
+            self.gconf_client.set_bool('/apps/gnome-power-manager/lock/hibernate', False)
+        else:
+            return handler.failed(request)
+        handler.success(request)
 
 preferencesManager = PreferencesManager()
