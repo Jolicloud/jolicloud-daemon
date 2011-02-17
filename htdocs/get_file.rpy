@@ -1,6 +1,9 @@
 import os
 
 from urllib import unquote
+from urlparse import urlparse
+
+from jolicloud_daemon.enums import TRUSTED_DOMAINS
 
 from twisted.web import resource, static, http
 from twisted.web.resource import Resource, ForbiddenResource
@@ -9,9 +12,12 @@ class JoliFile(Resource):
     def render_GET(self, request):
         
         if os.environ.get('JPD_DEBUG', '0') == '0':
-           headers = request.getAllHeaders()
-           if 'referer' not in headers or headers['referer'] not in ['http://my.jolicloud.com/', 'http://my.jolicloud.local/']:
-               return ForbiddenResource().render(request)
+            headers = request.getAllHeaders()
+            if 'referer' not in headers:
+                return ForbiddenResource().render(request)
+            parsed_referer = urlparse(headers['referer'])
+            if not (parsed_referer.hostname and '.'.join(parsed_referer.hostname.split('.')[-2:]) in TRUSTED_DOMAINS):
+                return ForbiddenResource().render(request)
         
         path = unquote(request.args.get('path', ['/'])[0])
         root = unquote(request.args.get('root', ['home'])[0])

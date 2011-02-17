@@ -4,7 +4,6 @@ __author__ = 'Jeremy Bethmont'
 
 import os
 import sys
-import re
 
 # XXX: try to use cjson which is much faster
 try:
@@ -26,6 +25,8 @@ try:
 except ImportError:
     pass
 
+from urlparse import urlparse
+
 from twisted.internet import reactor
 from twisted.python import log
 from twisted.python.logfile import LogFile
@@ -39,13 +40,6 @@ from jolicloud_daemon.jolidaemon import ijolidaemon
 from jolicloud_daemon.enums import *
 from jolicloud_daemon import managers
 from jolicloud_daemon.plugins import SystemManager, SessionManager
-
-TRUSTED_URI = (
-    # re.compile(".*"),
-    re.compile("https?://my\.jolicloud\.(com|local)"),
-    re.compile("https?://.*\.dev\.jolicloud\.org"),
-    re.compile("http://localhost")
-)
 
 class JolicloudRequest(object):
     def __init__(self, frame):
@@ -65,13 +59,8 @@ class JolicloudWSRequest(WebSocketRequest):
             if len(origin) != 1:
                 log.msg('Refusing connection because no origin is set.')
                 return self.channel.transport.loseConnection()
-            origin = origin[0].strip()
-            accepted = False
-            for uri in TRUSTED_URI:
-                if uri.match(origin):
-                    accepted = True
-                    break
-            if accepted:
+            parsed_origin = urlparse(origin[0].strip())
+            if parsed_origin.hostname and '.'.join(parsed_origin.hostname.split('.')[-2:]) in TRUSTED_DOMAINS:
                 log.msg('Accepting connection from [%s]' % origin)
             else:
                 log.msg('Refusing connection from [%s]' % origin)

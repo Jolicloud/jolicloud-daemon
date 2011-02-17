@@ -1,3 +1,10 @@
+TRUSTED_DOMAINS = [
+    'jolicloud.com',
+    'jolicloud.org',
+    'jolicloud.local',
+    'localhost'
+]
+
 OPERATION_FAILED = {
     'params': {
         'type':    'status',
