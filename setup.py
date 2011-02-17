@@ -18,8 +18,7 @@ setup(
     scripts=['jolicloud-daemon'],
     data_files=[
         ('share/jolicloud-daemon/icons', glob.glob('icons/*.png')),
-        ('share/jolicloud-daemon/htdocs', glob.glob('htdocs/*.html') + glob.glob('htdocs/*.css')),
-        ('share/jolicloud-daemon/htdocs/cgi-bin', glob.glob('htdocs/cgi-bin/*.py')),
+        ('share/jolicloud-daemon/htdocs', glob.glob('htdocs/*.html') + glob.glob('htdocs/*.css') + glob.glob('htdocs/*.rpy')),
         ('share/jolicloud-daemon/htdocs/tests', glob.glob('htdocs/tests/*.html')),
         ('lib/jolicloud-daemon/utils', glob.glob('utils/*')),
         ('share/polkit-1/actions', glob.glob('polkit/*.policy')),
