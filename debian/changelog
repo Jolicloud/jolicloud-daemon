@@ -1,3 +1,24 @@
+jolicloud-daemon (1.2.1) robby; urgency=low
+
+  * Use incognito mode in guest and live mode.
+  * Handle jolicloud-dispaymanager autologin and guestmode.
+  * Fixed webapps launch
+  * Added filesystem manager
+  * Added missing root elem.
+  * Added filesystem/thumbnail, filesystem/account and added Windows
+    virtual device.
+  * Added get_thumbnails and get_icon rpy scripts.
+  * Switched /cgi-bin/get_icon.py to /get_icon.rpy.
+  * Added a proxy to local files.
+  * Replaced cgi.escape with urllib.unquote.
+  * Filter local file proxy by type and referer.
+  * Improved guestmode and autologin scripts in order to handle multiple
+    configuration files.
+  * Added suspend_lock and hibernate_lock directly in the autologin
+    preference.
+
+ -- Jérémy Bethmont <jerem@jolicloud.org>  Thu, 17 Feb 2011 12:20:03 +0100
+
 jolicloud-daemon (1.2) robby; urgency=low
 
   * Full rewrite of jolicloud-daemon using Twisted.
