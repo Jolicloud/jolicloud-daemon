@@ -1,3 +1,12 @@
+jolicloud-daemon (1.2.2~jerem1) robby; urgency=low
+
+  ** SNAPSHOT build @a2ad8dd0c40d563c1b88c353712622e7ec5abb2e **
+
+  * Removed /cgi-bin directory and added *.rpy to setup.py.
+  * Fixed authorized domais for websocket connections and get_file.rpy.
+
+ -- Jérémy Bethmont <jerem@jolicloud.org>  Thu, 17 Feb 2011 16:57:12 +0100
+
 jolicloud-daemon (1.2.1) robby; urgency=low
 
   * Use incognito mode in guest and live mode.
