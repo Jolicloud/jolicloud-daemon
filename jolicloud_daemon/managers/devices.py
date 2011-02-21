@@ -86,18 +86,9 @@ class DevicesManager(LinuxSessionManager):
         })
     
     def _parse_volume_properties(self, dev_props):
-#        print dev_props['DeviceFile']
-#        print 'IdUsage', dev_props.get('IdUsage', '')
-#        print 'DevicePresentationHide', dev_props['DevicePresentationHide']
-#        print 'DeviceIsDrive', dev_props['DeviceIsDrive']
-#        print 'DeviceIsOpticalDisc', dev_props['DeviceIsOpticalDisc']
-#        print 'DeviceIsMounted', dev_props['DeviceIsMounted']
-#        print 'DriveIsMediaEjectable', dev_props['DriveIsMediaEjectable']
         if dev_props['IdUsage'] == 'filesystem' and \
-           not dev_props['DevicePresentationHide'] and \
-           not dev_props['DeviceIsDrive'] or \
-           dev_props['DriveIsMediaEjectable']:# or \
-           #dev_props['DriveCanDetach']:
+           not dev_props['DevicePresentationHide'] or \
+           dev_props['DriveIsMediaEjectable']:
             label, mount_point, size_free = None, None, None
             if not dev_props['IdLabel'] and (dev_props['DriveIsMediaEjectable'] or dev_props['DriveCanDetach']):
                 label = dev_props['DriveModel']
@@ -106,6 +97,8 @@ class DevicesManager(LinuxSessionManager):
                 size_free = self._get_size(dev_props['DeviceMountPaths'][0])[1]
             if mount_point == '/':
                 label = 'Jolicloud'
+            elif mount_point == '/host':
+                label = 'Windows'
             return {
                 # Old API
                 'volume.label': label or dev_props['IdLabel'] or dev_props['IdUuid'],
@@ -122,7 +115,7 @@ class DevicesManager(LinuxSessionManager):
                 'IdUuid': dev_props['IdUuid'],
                 'DriveModel': dev_props['DriveModel'],
                 'DriveVendor': dev_props['DriveVendor'],
-                'DisplayName': dev_props['IdLabel'] if dev_props['IdLabel'] else '%s %s' % (dev_props['DriveVendor'], dev_props['DriveModel']),
+                'DisplayName': label or dev_props['IdLabel'] if dev_props['IdLabel'] else '%s %s' % (dev_props['DriveVendor'], dev_props['DriveModel']),
                 
                 # Partition
                 'PartitionSize': dev_props['PartitionSize'],
@@ -162,32 +155,6 @@ class DevicesManager(LinuxSessionManager):
                     []
                 )
             if len(result) == len(devices):
-                if os.path.exists('/host'):
-                    size = self._get_size('/host')
-                    result.append({
-                        'udi': '/org/jolicloud/daemon/devices/host',
-                        'properties': {
-                            # Old API
-                            'volume.label': 'Windows',
-                            'volume.model': 'MS Windows',
-                            'volume.is_disc': 0,
-                            'volume.mount_point': '/host',
-                            'volume.size': size[0],
-                            'volume.size_free': size[1],
-                            # New API matching org.freedesktop.UDisks
-                            'IdLabel': 'Windows',
-                            'IdUuid': 'MSWINDOWS',
-                            'DriveModel': 'MS Windows',
-                            'DisplayName': 'Windows',
-                            'DriveIsMediaEjectable': 0,
-                            'DriveCanDetach': 0,
-                            'PartitionSize': size[0],
-                            'DeviceIsMediaAvailable': 0,
-                            'DeviceIsMounted': 1,
-                            'DeviceMountPaths': ['/host'],
-                            'DeviceIsSystemInternal': 1
-                        }
-                    })
                 handler.send_data(request, [r for r in result if r['properties']])
                 handler.success(request)
         def error_handler(udi, error):
