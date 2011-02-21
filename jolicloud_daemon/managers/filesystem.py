@@ -124,7 +124,8 @@ class FilesystemManager(LinuxSessionManager):
                 result = {
                     'quota': {
                         'total': info.get_attribute_uint64('filesystem::size'),
-                        'available': info.get_attribute_uint64('filesystem::free')
+                        'available': info.get_attribute_uint64('filesystem::free'),
+                        'used': info.get_attribute_uint64('filesystem::size') - info.get_attribute_uint64('filesystem::free')
                     },
                     'description': info.get_attribute_as_string('filesystem::type')
                 }
