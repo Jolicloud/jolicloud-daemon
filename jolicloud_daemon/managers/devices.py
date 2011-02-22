@@ -99,7 +99,7 @@ class DevicesManager(LinuxSessionManager):
                 label = 'Jolicloud'
             elif mount_point == '/host':
                 label = 'Windows'
-            return {
+            result = {
                 # Old API
                 'volume.label': label or dev_props['IdLabel'] or dev_props['IdUuid'],
                 'volume.model': dev_props['DriveModel'],
@@ -135,6 +135,11 @@ class DevicesManager(LinuxSessionManager):
                 'DeviceMountPaths': dev_props['DeviceMountPaths'],
                 'DeviceIsSystemInternal': dev_props['DeviceIsSystemInternal'],
             }
+            # Ugly hack for live session
+            if mount_point == '/rofs':
+                result['volume.mount_point'] = '/'
+                result['DeviceMountPaths'] = ['/']
+            return result
     
     def volumes(self, request, handler):
         result = []
