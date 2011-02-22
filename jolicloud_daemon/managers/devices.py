@@ -3,6 +3,8 @@
 __author__ = 'Jeremy Bethmont'
 
 import os
+import grp
+import gconf
 import dbus
 
 from functools import partial
@@ -21,7 +23,12 @@ class DevicesManager(LinuxSessionManager):
     _PATH = '/org/freedesktop/UDisks'
     _DEVICE_NS = 'org.freedesktop.UDisks.Devices'
     
+    _groups = []
+    
     def __init__(self):
+        for group_id in os.getgroups():
+            self._groups.append(grp.getgrgid(group_id).gr_name)
+        
         self.dbus_system = dbus.SystemBus()
         self._udisks_proxy = self.dbus_system.get_object(self._NS, self._PATH)
         self._udisks_iface = dbus.Interface(self._udisks_proxy, self._NS)
@@ -86,6 +93,12 @@ class DevicesManager(LinuxSessionManager):
         })
     
     def _parse_volume_properties(self, dev_props):
+        # Do not return internals partitions for guests
+        if 'guests' in self._groups and dev_props['DeviceIsSystemInternal']:
+            if not dev_props['DeviceIsMounted']:
+                return
+            elif dev_props['DeviceMountPaths'][0] != '/':
+                return
         if dev_props['IdUsage'] == 'filesystem' and \
            not dev_props['DevicePresentationHide'] or \
            dev_props['DriveIsMediaEjectable']:
