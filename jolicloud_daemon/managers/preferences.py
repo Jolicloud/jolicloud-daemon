@@ -60,9 +60,11 @@ class PreferencesManager(LinuxSessionManager):
                 elif action == 'enable':
                     gconf_client.set_bool('/apps/gnome-power-manager/lock/suspend', False)
                     gconf_client.set_bool('/apps/gnome-power-manager/lock/hibernate', False)
+                    gconf_client.set_bool('/apps/gnome-screensaver/lock_enabled', False)
                 elif action == 'disable':
                     gconf_client.set_bool('/apps/gnome-power-manager/lock/suspend', True)
                     gconf_client.set_bool('/apps/gnome-power-manager/lock/hibernate', True)
+                    gconf_client.set_bool('/apps/gnome-screensaver/lock_enabled', True)
                 handler.success(request)
         reactor.spawnProcess(
             GetProcessOutput(),
