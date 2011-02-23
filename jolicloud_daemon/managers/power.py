@@ -33,7 +33,10 @@ class PowerManager(LinuxSessionManager):
     def _changed(self):
         self.emit('changed', self._props_iface.GetAll(self._NS))
         log.msg('UPower changed: %s' % self._props_iface.GetAll(self._NS))
-        
+    
+    def properties(self, request, handler):
+        return self._props_iface.GetAll(self._NS)
+    
     def shutdown(self, request, handler):
         def reply_handler():
             handler.success(request)

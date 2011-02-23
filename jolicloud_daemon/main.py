@@ -85,6 +85,7 @@ class JolicloudWSHandler(WebSocketHandler):
         'session/hibernate': 'power/hibernate',
         'session/sleep': 'power/sleep',
         'session/on_battery': 'power/on_battery',
+        'session/properties': 'power/properties',
     }
     
     events_rewrite = {
