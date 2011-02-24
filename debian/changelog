@@ -1,11 +1,16 @@
-jolicloud-daemon (1.2.2~jerem1) robby; urgency=low
-
-  ** SNAPSHOT build @a2ad8dd0c40d563c1b88c353712622e7ec5abb2e **
+jolicloud-daemon (1.2.2) robby; urgency=low
 
   * Removed /cgi-bin directory and added *.rpy to setup.py.
   * Fixed authorized domais for websocket connections and get_file.rpy.
+  * Added two new preferences: suspend_lock and hibernate_lock.
+  * Fixed devices with Jolicloud Express.
+  * Added used size in quota.
+  * Fixed devices for live sessions.
+  * Do not return internal drives for guests.
+  * Hendle Gnome Screensaver lock in auto-login preference
+  * Added power/properties and bumped version to 1.2.2
 
- -- Jérémy Bethmont <jerem@jolicloud.org>  Thu, 17 Feb 2011 16:57:12 +0100
+ -- Jérémy Bethmont <jerem@jolicloud.org>  Thu, 24 Feb 2011 17:59:34 +0100
 
 jolicloud-daemon (1.2.1) robby; urgency=low
 
