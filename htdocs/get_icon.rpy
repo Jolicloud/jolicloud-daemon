@@ -5,6 +5,9 @@ import sys
 import base64
 import time
 
+import cairo
+import rsvg
+
 import xdg.DesktopEntry
 import xdg.Menu
 import xdg.IconTheme
@@ -31,6 +34,14 @@ def date_time_string(timestamp=None):
             day, monthname[month], year,
             hh, mm, ss)
     return s
+
+def convert_svg_to_png(ifile, ofile, maxwidth=0, maxheight=0):
+    svg = rsvg.Handle(ifile)
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, svg.props.width, svg.props.height)
+    context = cairo.Context(surface)
+    svg.render_cairo(context)
+    surface.write_to_png(ofile)
+    surface.finish()
 
 def get_icon_blocking(request):
     if not request.args.get('desktop', None):
@@ -80,8 +91,13 @@ def get_icon_blocking(request):
             request.setHeader('Cache-Control', 'max-age=%d' % 604800)
             request.setHeader('Last-Modified', date_time_string())
             request.setHeader('Date', date_time_string())
-            request.write(file)
-            request.finish()
+            if type == 'image/svg+xml':
+                request.setHeader('Content-type', 'image/png')
+                convert_svg_to_png(icon_path, request)
+                request.finish()
+            else:
+                request.write(file)
+                request.finish()
 
 class IconResource(Resource):
     def render_GET(self, request):
