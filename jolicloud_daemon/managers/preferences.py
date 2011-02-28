@@ -26,8 +26,10 @@ class PreferencesManager(LinuxSessionManager):
             self._capabilities = [
                 'autologin',
                 'guestmode',
+                'migrate_connections',
                 'suspend_lock',
-                'hibernate_lock'
+                'hibernate_lock',
+                'screensaver_lock',
             ]
     
     def capabilities(self, request, handler):
@@ -108,6 +110,30 @@ class PreferencesManager(LinuxSessionManager):
             env=os.environ
         )
     
+    def migrate_connections(self, request, handler, action='enable'):
+        if 'admin' not in self._groups:
+            return handler.failed(request) # TODO: Permission denied
+        
+        if action not in ['enable']:
+            return handler.failed(request) # TODO: Wrong params
+        
+        class GetProcessOutput(protocol.ProcessProtocol):
+            out = ''
+            def outReceived(self, data):
+                self.out += data
+            def errReceived(self, data):
+                log.msg("[utils/migrate_connections] [stderr] %s" % data)
+            def processEnded(self, status_object):
+                if status_object.value.exitCode != 0:
+                    return handler.failed(request)
+                handler.success(request)
+        reactor.spawnProcess(
+            GetProcessOutput(),
+            '/usr/bin/pkexec',
+            ['pkexec', '/usr/lib/jolicloud-daemon/utils/migrate-nm-connections'],
+            env=os.environ
+        )
+    
     def suspend_lock(self, request, handler, action='status'):
         if action == 'status':
             if self.gconf_client.get_bool('/apps/gnome-power-manager/lock/suspend'):
@@ -132,6 +158,20 @@ class PreferencesManager(LinuxSessionManager):
             self.gconf_client.set_bool('/apps/gnome-power-manager/lock/hibernate', True)
         elif action == 'disable':
             self.gconf_client.set_bool('/apps/gnome-power-manager/lock/hibernate', False)
+        else:
+            return handler.failed(request)
+        handler.success(request)
+
+    def screensaver_lock(self, request, handler, action='status'):
+        if action == 'status':
+            if self.gconf_client.get_bool('/apps/gnome-screensaver/lock_enabled'):
+               return 'enabled'
+            else:
+               return 'disabled'
+        if action == 'enable':
+            self.gconf_client.set_bool('/apps/gnome-screensaver/lock_enabled', True)
+        elif action == 'disable':
+            self.gconf_client.set_bool('/apps/gnome-screensaver/lock_enabled', False)
         else:
             return handler.failed(request)
         handler.success(request)
