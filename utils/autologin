@@ -11,7 +11,7 @@ config = ConfigParser.RawConfigParser()
 
 if sys.argv[1] == 'status':
     for f in sorted(os.listdir(config_base)):
-        if not f.startswith('.') and not f.endswith('~') and not f.endswith('.oem'):
+        if not f.startswith('.') and not f.endswith(('~', '.oem', '.pkg-old')):
             config.read(os.path.join(config_base, f))
     if config.has_section('autologin') and config.getboolean('autologin', 'enabled') == True:
         print 'enabled'
