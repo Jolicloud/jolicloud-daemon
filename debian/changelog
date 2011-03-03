@@ -1,3 +1,16 @@
+jolicloud-daemon (1.2.3) robby; urgency=low
+
+  * Added migrate_connections and screensaver_lock preferences.
+  * Updated legal files
+  * Convert SVG to PNG before serving icons in order to improve
+    rendering in the browser.
+  * Added python-cairo and python-rsvg as dependencies.
+  * Ignore .pkg-old config files.
+  * Fixed device label with JE.
+  * Bumped version number.
+
+ -- Jérémy Bethmont <jerem@jolicloud.org>  Thu, 03 Mar 2011 16:45:35 +0100
+
 jolicloud-daemon (1.2.2) robby; urgency=low
 
   * Removed /cgi-bin directory and added *.rpy to setup.py.
