@@ -112,9 +112,11 @@ class DevicesManager(LinuxSessionManager):
                 label = 'Jolicloud'
             elif mount_point == '/host':
                 label = 'Windows'
+            else:
+                label = dev_props['IdLabel'] or '%s %s' % (dev_props['DriveVendor'], dev_props['DriveModel'])
             result = {
                 # Old API
-                'volume.label': label or dev_props['IdLabel'] or dev_props['IdUuid'],
+                'volume.label': label.strip(),
                 'volume.model': dev_props['DriveModel'],
                 'volume.is_disc': dev_props['DriveIsMediaEjectable'],
                 'volume.mount_point': mount_point,
@@ -128,7 +130,7 @@ class DevicesManager(LinuxSessionManager):
                 'IdUuid': dev_props['IdUuid'],
                 'DriveModel': dev_props['DriveModel'],
                 'DriveVendor': dev_props['DriveVendor'],
-                'DisplayName': label or dev_props['IdLabel'] if dev_props['IdLabel'] else '%s %s' % (dev_props['DriveVendor'], dev_props['DriveModel']),
+                'DisplayName': label.strip(),
                 
                 # Partition
                 'PartitionSize': dev_props['PartitionSize'],
