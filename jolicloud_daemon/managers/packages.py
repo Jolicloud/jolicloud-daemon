@@ -47,6 +47,7 @@ class Transaction():
     def run(self, command, *args):
         def run_it():
             self.tid = self.pk_control.GetTid()
+            self.pk_control.SetProxy(os.getenv('http_proxy', ''), os.getenv('ftp_proxy', ''))
             log.msg('[%s] New transaction' % self.tid)
             self.transaction = dbus.Interface(self.dbus_system.get_object(
                 'org.freedesktop.PackageKit',
