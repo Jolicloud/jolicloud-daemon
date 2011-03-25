@@ -23,8 +23,9 @@ Resources
 Copyright
 =========
 
-Joli OS is copyrighted by Jolicloud SAS and others.
-  
+Joli OS is copyrighted by Jolicloud SAS and others. You are not granted rights or licenses to the trademarks of Jolicloud or any party, including without limitation the Joli OS name or logo.
+Copyright (C) 2009-2011 - The name and logo for Jolicloud are registered trademarks of Jolicloud SAS.
+
 > This program is free software; you can redistribute it and/or modify
 > it under the terms of the GNU General Public License as published by
 > the Free Software Foundation; version 2 dated June, 1991.
