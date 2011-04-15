@@ -4,7 +4,6 @@ __author__ = 'Jeremy Bethmont'
 
 import os
 import dbus
-import urllib2
 import subprocess
 
 from functools import partial
@@ -102,7 +101,6 @@ class NetworkManager(LinuxSessionManager):
                     )
             factory = myGetPage('http://ping.jolicloud.com', timeout=30)
             factory.deferred.addCallback(partial(getpage_callback, factory))
-            response = urllib2.urlopen('http://ping.jolicloud.com')
 
     def on_cellular_network(self, request, handler):
         """
