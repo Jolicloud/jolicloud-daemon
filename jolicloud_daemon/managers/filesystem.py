@@ -6,6 +6,7 @@ import os
 import sys
 import base64
 import gio
+import locale
 
 from datetime import datetime
 
@@ -60,6 +61,7 @@ class FilesystemManager(LinuxSessionManager):
             tf = ui.ThumbnailFactory(ui.THUMBNAIL_SIZE_NORMAL)
             try:
                 info = file.query_info_finish(result)
+                locale.setlocale(locale.LC_TIME, 'C')
                 result = {
                     'root': vanilla_root,
                     'path': format_path(file.get_path()),
@@ -67,6 +69,7 @@ class FilesystemManager(LinuxSessionManager):
                     'mime_type': info.get_content_type(),
                     'thumbnail': tf.can_thumbnail(file.get_uri(), info.get_content_type(), int(info.get_modification_time()))
                 }
+                locale.setlocale(locale.LC_TIME, '')
                 if info.get_file_type() == gio.FILE_TYPE_DIRECTORY:
                     result['is_dir'] = True
                     result['bytes'] = 0
@@ -77,6 +80,7 @@ class FilesystemManager(LinuxSessionManager):
                             name = c_info.get_name()
                             path = c_file.get_child(name).get_path()
                             if not name.startswith('.'):
+                                locale.setlocale(locale.LC_TIME, 'C')
                                 result['contents'].append({
                                     'root': vanilla_root,
                                     'path': format_path(path),
@@ -86,6 +90,7 @@ class FilesystemManager(LinuxSessionManager):
                                     'mime_type': c_info.get_content_type(),
                                     'thumbnail': tf.can_thumbnail(c_file.get_uri(), c_info.get_content_type(), int(c_info.get_modification_time()))
                                 })
+                                locale.setlocale(locale.LC_TIME, '')
                         handler.send_data(request, result)
                         handler.success(request)
                     file.enumerate_children_async('standard::name,%s' % self._infos, callback=get_contents)
