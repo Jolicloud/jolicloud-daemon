@@ -53,21 +53,28 @@ class JolicloudRequest(object):
 
 class JolicloudWSRequest(WebSocketRequest):
     def process(self):
-        if (self.requestHeaders.getRawHeaders("Upgrade") == ["WebSocket"] and
-            self.requestHeaders.getRawHeaders("Connection") == ["Upgrade"]):
-            origin = self.requestHeaders.getRawHeaders('origin', [])
-            if len(origin) != 1:
-                log.msg('Refusing connection because no origin is set.')
-                return self.channel.transport.loseConnection()
-            parsed_origin = urlparse(origin[0].strip())
-            if parsed_origin.hostname and '.'.join(parsed_origin.hostname.split('.')[-2:]) in TRUSTED_DOMAINS:
-                log.msg('Accepting connection from [%s]' % origin)
-            else:
-                log.msg('Refusing connection from [%s]' % origin)
-                return self.channel.transport.loseConnection()
-            return self.processWebSocket()
-        else:
+        connection = self.requestHeaders.getRawHeaders("Connection", [None])[0]
+        upgrade = self.requestHeaders.getRawHeaders("Upgrade", [None])[0]
+        
+        if not connection or "Upgrade" not in connection:
             return Request.process(self)
+        
+        if upgrade not in ("WebSocket", "websocket"):
+            return Request.process(self)
+        
+        origin = self.requestHeaders.getRawHeaders('origin', [None])[0]
+        secOrigin = self.requestHeaders.getRawHeaders('Sec-WebSocket-Origin', [None])[0]
+        if not origin and not secOrigin:
+            log.msg('Refusing connection because no origin is set.')
+            return self.channel.transport.loseConnection()
+        parsed_origin = urlparse((origin or secOrigin).strip())
+        if parsed_origin.hostname and '.'.join(parsed_origin.hostname.split('.')[-2:]) in TRUSTED_DOMAINS:
+            log.msg('Accepting connection from [%s]' % origin)
+        else:
+            log.msg('Refusing connection from [%s]' % origin)
+            return self.channel.transport.loseConnection()
+        
+        return self.processWebSocket()
 
 class JolicloudWSSite(WebSocketSite):
     requestFactory = JolicloudWSRequest
