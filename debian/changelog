@@ -1,3 +1,10 @@
+jolicloud-daemon (1.2.4~hybi10.1) robby; urgency=low
+
+  [ Jérémy Bethmont ]
+  * Attempt to support hybi-10 handshake.
+
+ -- Adam McDaniel <adam@jolicloud.org>  Sun, 02 Oct 2011 21:58:41 -0600
+
 jolicloud-daemon (1.2.3) robby; urgency=low
 
   * Added migrate_connections and screensaver_lock preferences.
