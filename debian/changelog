@@ -1,3 +1,14 @@
+jolicloud-daemon (1.2.4) robby; urgency=low
+
+  [ Jérémy Bethmont ]
+  * Added HTTP and FTP proxy support
+  * Added trademarks
+  * Removed deprecated code.
+  * Fixed incorrect dates with non english systems.
+  * Attempt to support hybi-10 handshake.
+
+ -- Adam McDaniel <adam@jolicloud.org>  Mon, 10 Oct 2011 05:08:23 -0600
+
 jolicloud-daemon (1.2.3) robby; urgency=low
 
   * Added migrate_connections and screensaver_lock preferences.
