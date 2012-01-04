@@ -21,7 +21,9 @@ import struct
 
 from twisted.internet import interfaces
 from twisted.python import log
+from twisted.web._newclient import makeStatefulDispatcher
 from twisted.web.http import datetimeToString
+from twisted.web.http import _IdentityTransferDecoder
 from twisted.web.server import Request, Site, version, unquote
 from zope.interface import implements
 
@@ -40,108 +42,6 @@ ALL_OPCODES = (OPCODE_CONT, OPCODE_TEXT, OPCODE_BINARY,
 CONTROL_OPCODES = (OPCODE_CLOSE, OPCODE_PING, OPCODE_PONG)
 DATA_OPCODES = (OPCODE_TEXT, OPCODE_BINARY)
 
-# backported from twisted 11
-# twisted.web.http
-class _IdentityTransferDecoder(object):
-    """
-    Protocol for accumulating bytes up to a specified length.  This handles the
-    case where no I{Transfer-Encoding} is specified.
-
-    @ivar contentLength: Counter keeping track of how many more bytes there are
-        to receive.
-
-    @ivar dataCallback: A one-argument callable which will be invoked each
-        time application data is received.
-
-    @ivar finishCallback: A one-argument callable which will be invoked when
-        the terminal chunk is received.  It will be invoked with all bytes
-        which were delivered to this protocol which came after the terminal
-        chunk.
-    """
-    def __init__(self, contentLength, dataCallback, finishCallback):
-        self.contentLength = contentLength
-        self.dataCallback = dataCallback
-        self.finishCallback = finishCallback
-
-
-    def dataReceived(self, data):
-        """
-        Interpret the next chunk of bytes received.  Either deliver them to the
-        data callback or invoke the finish callback if enough bytes have been
-        received.
-
-        @raise RuntimeError: If the finish callback has already been invoked
-            during a previous call to this methood.
-        """
-        if self.dataCallback is None:
-            raise RuntimeError(
-                "_IdentityTransferDecoder cannot decode data after finishing")
-
-        if self.contentLength is None:
-            self.dataCallback(data)
-        elif len(data) < self.contentLength:
-            self.contentLength -= len(data)
-            self.dataCallback(data)
-        else:
-            # Make the state consistent before invoking any code belonging to
-            # anyone else in case noMoreData ends up being called beneath this
-            # stack frame.
-            contentLength = self.contentLength
-            dataCallback = self.dataCallback
-            finishCallback = self.finishCallback
-            self.dataCallback = self.finishCallback = None
-            self.contentLength = 0
-
-            dataCallback(data[:contentLength])
-            finishCallback(data[contentLength:])
-
-
-    def noMoreData(self):
-        """
-        All data which will be delivered to this decoder has been.  Check to
-        make sure as much data as was expected has been received.
-
-        @raise PotentialDataLoss: If the content length is unknown.
-        @raise _DataLoss: If the content length is known and fewer than that
-            many bytes have been delivered.
-
-        @return: C{None}
-        """
-        finishCallback = self.finishCallback
-        self.dataCallback = self.finishCallback = None
-        if self.contentLength is None:
-            finishCallback('')
-            raise PotentialDataLoss()
-        elif self.contentLength != 0:
-            raise _DataLoss()
-
-# Backported from twisted 11
-# twisted.web._newclient
-def makeStatefulDispatcher(name, template):
-    """
-    Given a I{dispatch} name and a function, return a function which can be
-    used as a method and which, when called, will call another method defined
-    on the instance and return the result.  The other method which is called is
-    determined by the value of the C{_state} attribute of the instance.
-
-    @param name: A string which is used to construct the name of the subsidiary
-        method to invoke.  The subsidiary method is named like C{'_%s_%s' %
-        (name, _state)}.
-
-    @param template: A function object which is used to give the returned
-        function a docstring.
-
-    @return: The dispatcher function.
-    """
-    def dispatcher(self, *args, **kwargs):
-        func = getattr(self, '_' + name + '_' + self._state, None)
-        if func is None:
-            raise RuntimeError(
-                "%r has no %s method in state %s" % (self, name, self._state))
-        return func(*args, **kwargs)
-    dispatcher.__doc__ = template.__doc__
-    return dispatcher
-
 
 class WebSocketRequest(Request):
     """
@@ -149,22 +49,6 @@ class WebSocketRequest(Request):
     """
 
     ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-
-    # this is backported from twisted 10.2.0
-    content = None
-
-    def connectionLost(self, reason):
-        """
-        There is no longer a connection for this request to respond over.
-        Clean up anything which can't be useful anymore.
-        """
-        self._disconnected = True
-        self.channel = None
-        if self.content is not None:
-            self.content.close()
-        for d in self.notifications:
-            d.errback(reason)
-        self.notifications = []
 
     def process(self):
         connection = self.requestHeaders.getRawHeaders("Connection", [None])[0]
@@ -363,9 +247,9 @@ class WebSocketRequest(Request):
 
     def _clientHandshakeHybi(self):
         """
-        Initial handshake, as defined in hybi-10.
+        Initial handshake, as defined in hybi-10 and 16 (versions 8 and 13).
 
-        If the client is not following the hybi-10 protocol or is requesting a
+        If the client is not following the hybi-10 or 16 protocol or is requesting a
         version that's lower than what hybi-10 describes, the connection will
         be closed.
 
@@ -373,8 +257,8 @@ class WebSocketRequest(Request):
         plugged in and the connection will be estabilished.
         """
         version = self._getOneHeader("Sec-WebSocket-Version")
-        # we only speak version 8 of the protocol
-        if version != "8":
+        # we only speak version 8 and 13 of the protocol
+        if version not in ("8", "13"):
             self.setResponseCode(426, "Upgrade Required")
             self.setHeader("Sec-WebSocket-Version", "8")
             return self.finish()
