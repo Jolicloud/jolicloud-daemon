@@ -1,3 +1,13 @@
+jolicloud-daemon (1.2.5) robby; urgency=low
+
+  [ Jérémy Bethmont ]
+  * Updated websocket.py to support hybi-16 protocol.
+
+  [ Adam McDaniel ]
+  * Bumped daemon version number to 1.2.5
+
+ -- Adam McDaniel <adam@jolicloud.org>  Wed, 04 Jan 2012 04:26:04 -0700
+
 jolicloud-daemon (1.2.4) robby; urgency=low
 
   [ Jérémy Bethmont ]
