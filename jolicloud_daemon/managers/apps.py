@@ -7,6 +7,7 @@ import shlex
 import time
 import wnck
 import grp
+import ctypes
 
 from twisted.internet import reactor, protocol
 from twisted.web.client import downloadPage
@@ -123,5 +124,41 @@ class AppsManager(LinuxSessionManager):
                 handler.send_data(request, desktops.values())
                 handler.success(request)
         reactor.spawnProcess(DpkgOut(), '/usr/bin/dpkg', ['dpkg', '-S'] + desktops.keys())
+    
+    def main_menu(self, request, handler):
+        class Display(ctypes.Structure):
+            _fields_ = [('_opaque_struct', ctypes.c_int)]
+
+        class Data(ctypes.Union):
+            _fields_ = [
+                ('b', ctypes.c_char * 20),
+                ('s', ctypes.c_short * 10),
+                ('l', ctypes.c_long * 5),
+            ]
+
+        class XClientMessageEvent(ctypes.Structure):
+            _fields_ = [
+                ('type', ctypes.c_int),
+                ('serial', ctypes.c_ulong),
+                ('send_event', ctypes.c_int),
+                ('display', ctypes.POINTER(Display)),
+                ('window', ctypes.c_ulong),
+                ('message_type', ctypes.c_ulong),
+                ('format', ctypes.c_int),
+                ('data', Data),
+            ]
+
+        xlib = ctypes.cdll.LoadLibrary('libX11.so')
+        display = xlib.XOpenDisplay(None)
+        event = XClientMessageEvent()
+        event.type = 33
+        event.window = xlib.XDefaultRootWindow(display)
+        event.message_type = xlib.XInternAtom(display, '_GNOME_PANEL_ACTION', False)
+        event.format = 32
+        event.data.l[0] = xlib.XInternAtom(display, '_GNOME_PANEL_ACTION_MAIN_MENU', False)
+        event.data.l[1] = 0
+        xlib.XSendEvent(display, event.window, False, 131072, ctypes.addressof(event))
+        xlib.XCloseDisplay(display)
+        handler.success(request)
 
 appsManager = AppsManager()
