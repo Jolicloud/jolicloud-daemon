@@ -42,7 +42,7 @@ class DaemonManager(LinuxSessionManager):
     
     def computer(self, request, handler):
         # Returns uuid, password and oem
-        retval = {}
+        retval = {'hostname': os.uname()[1]}
         # OEM
         try:
             cp = SafeConfigParser()
