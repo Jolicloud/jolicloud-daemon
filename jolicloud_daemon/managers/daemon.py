@@ -38,7 +38,7 @@ class DaemonManager(LinuxSessionManager):
         return False
     
     def version(self, request, handler):
-        return '1.2.5'
+        return '1.2.6'
     
     def computer(self, request, handler):
         # Returns uuid, password and oem
