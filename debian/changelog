@@ -1,3 +1,12 @@
+jolicloud-daemon (1.2.6) robby; urgency=low
+
+  * Added apps.main_menu method.
+  * Added hostname to daemon.computer response.
+  * Forced Python version to 2.6 as it is the only one existing on Joli Os <= 1.2.
+  * Bumped version number to 1.2.6.
+
+ -- Jérémy Bethmont <jerem@jolicloud.org>  Thu, 04 Oct 2012 15:32:55 +0200
+
 jolicloud-daemon (1.2.5) robby; urgency=low
 
   [ Jérémy Bethmont ]
