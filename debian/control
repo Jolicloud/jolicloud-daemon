@@ -13,7 +13,7 @@ Architecture: any
 Depends: python (>=2.6), python-twisted-core, python-twisted-web, python-simplejson,
  python-webkit, packagekit, policykit-1, upower, udisks, python-xdg, util-linux,
  dbus, network-manager, dpkg, consolekit, gnome-session, python-wnck, python-cairo,
- python-rsvg, ${shlibs:Depends}
+ python-rsvg, python-gnome2, ${shlibs:Depends}
 Provides: jolicloud-pkg-daemon
 Conflicts: jolicloud-pkg-daemon
 Replaces: jolicloud-pkg-daemon
