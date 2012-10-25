@@ -2,18 +2,19 @@ Source: jolicloud-daemon
 Section: jolicloud/net
 Priority: optional
 Maintainer: Jolicloud developers <developers@jolicloud.org>
-Build-Depends: cdbs (>= 0.4.49), debhelper (>= 7), python (>= 2.4), python-support
+Build-Depends: cdbs (>= 0.4.90~), debhelper (>= 7), python (>= 2.7)
 Standards-Version: 3.8.0
 Homepage: http://www.jolicloud.com
 Vcs-Git: git://github.com/jolicloud/jolicloud-daemon.git
 Vcs-Browser: https://github.com/jolicloud/jolicloud-daemon
+X-Python-Version: 2.7
 
 Package: jolicloud-daemon
 Architecture: any
-Depends: python (>=2.7), python-twisted-core, python-twisted-web, python-simplejson,
- python-webkit, packagekit, policykit-1, upower, udisks, python-xdg, util-linux,
- dbus, network-manager, dpkg, consolekit, gnome-session, python-wnck, python-cairo,
- python-rsvg, python-gnome2, ${shlibs:Depends}
+Depends: python (>=2.7), python-twisted-core, python-twisted-web,
+ python-simplejson, python-webkit, policykit-1, upower, udisks, python-xdg, util-linux, dbus,
+ network-manager, dpkg, consolekit, gnome-session, python-wnck, python-cairo, python-gnome2,
+ python-rsvg, ${shlibs:Depends}
 Provides: jolicloud-pkg-daemon
 Conflicts: jolicloud-pkg-daemon
 Replaces: jolicloud-pkg-daemon
