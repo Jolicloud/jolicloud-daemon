@@ -531,4 +531,4 @@ class PackagesManager(LinuxSessionManager):
         t._s_Changed = None
         t.run('GetRepoList', 'installed')
 
-packagesManager = PackagesManager()
+#packagesManager = PackagesManager()
