@@ -5,7 +5,7 @@ from distutils.core import setup
 
 setup(
     name='jolicloud-daemon',
-    version='1.2.6',
+    version='1.2.7',
     license='GPL v2',
     author='Jolicloud Developers',
     author_email='developers@jolicloud.org',
