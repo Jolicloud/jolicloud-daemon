@@ -1,3 +1,9 @@
+jolicloud-daemon (1.2.7) robby; urgency=low
+
+  * Added a JD_SESSION env variable to authenticate calls to get_file.rpy in https.
+
+ -- Jérémy Bethmont <jerem@jolicloud.org>  Mon, 19 Nov 2012 14:54:58 +0100
+
 jolicloud-daemon (1.2.6) robby; urgency=low
 
   * Added apps.main_menu method.

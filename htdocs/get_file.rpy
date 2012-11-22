@@ -13,10 +13,11 @@ class JoliFile(Resource):
         
         if os.environ.get('JPD_DEBUG', '0') == '0':
             headers = request.getAllHeaders()
-            if 'referer' not in headers:
-                return ForbiddenResource().render(request)
-            parsed_referer = urlparse(headers['referer'])
-            if not (parsed_referer.hostname and '.'.join(parsed_referer.hostname.split('.')[-2:]) in TRUSTED_DOMAINS):
+            if 'referer' in headers:
+                parsed_referer = urlparse(headers['referer'])
+                if not (parsed_referer.hostname and '.'.join(parsed_referer.hostname.split('.')[-2:]) in TRUSTED_DOMAINS):
+                    return ForbiddenResource().render(request)
+            elif request.args.get('session', [False])[0] != os.environ.get('JD_SESSION', True):
                 return ForbiddenResource().render(request)
         
         path = unquote(request.args.get('path', ['/'])[0])
