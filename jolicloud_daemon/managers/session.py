@@ -23,23 +23,37 @@ class SessionManager(LinuxSessionManager):
         self.dbus_session = dbus.SessionBus()
     
     def logout(self, request, handler):
-        gnome_session = self.dbus_session.get_object(
-            'org.gnome.SessionManager',
-            '/org/gnome/SessionManager'
-        )
-        def reply_handler():
-            handler.success(request)
-        def error_handler(error):
-            log.msg("Problem contacting the SessionManager.  Calling gnome-session-save instead.")
-            status = os.system('gnome-session-save --logout')
-            if status > 0:
-                log.msg("gnome-session-save returned failure status %s" % status)
-            else:
-                handler.failed(request)
-        gnome_session.Logout(
-            dbus.UInt32(self.GSM_LOGOUT_MODE_NO_CONFIRMATION),
-            reply_handler=reply_handler,
-            error_handler=error_handler
+        # Close gnome session
+        #gnome_session = self.dbus_session.get_object(
+        #    'org.gnome.SessionManager',
+        #    '/org/gnome/SessionManager'
+        #)
+        #def reply_handler():
+        #    handler.success(request)
+        #def error_handler(error):
+        #    log.msg("Problem contacting the SessionManager.  Calling gnome-session-save instead.")
+        #    status = os.system('gnome-session-save --logout')
+        #    if status > 0:
+        #        log.msg("gnome-session-save returned failure status %s" % status)
+        #    else:
+        #        handler.failed(request)
+        #gnome_session.Logout(
+        #    dbus.UInt32(self.GSM_LOGOUT_MODE_NO_CONFIRMATION),
+        #    reply_handler=reply_handler,
+        #    error_handler=error_handler
+        #)
+        # Close awesome session
+        class WriteProcessStdIn(protocol.ProcessProtocol):
+            def connectionMade(self):
+                self.transport.write('awesome.quit()')
+                self.transport.closeStdin()
+            def processEnded(self, status_object):
+                handler.success(request)
+        reactor.spawnProcess(
+             WriteProcessStdIn(),
+             'awesome-client',
+              ['awesome-client'],
+             os.environ
         )
     
     def inhibit_screensaver(self, request, handler, reason='No particular reason'):

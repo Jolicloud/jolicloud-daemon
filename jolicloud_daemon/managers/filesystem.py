@@ -9,6 +9,7 @@ import gio
 import locale
 
 from datetime import datetime
+from stat import S_ISDIR
 
 from gnome import ui
 
@@ -109,13 +110,28 @@ class FilesystemManager(LinuxSessionManager):
         
         if root == 'home' or root == 'HOME':
             root = os.getenv('HOME')
-        
-        f = reactor.spawnProcess(
-            protocol.ProcessProtocol(),
-            '/usr/bin/setsid', # setsid - run a program in a new session
-            ['setsid', 'xdg-open', '%s/%s' % (root, path.strip('/'))],
-            env=os.environ
-        )
+
+        is_dir = False
+        try:
+            s = os.stat('%s/%s' % (root, path.strip('/')))
+            is_dir = S_ISDIR(s.st_mode)
+        except Exception:
+            pass
+
+        if is_dir:
+            f = reactor.spawnProcess(
+                protocol.ProcessProtocol(),
+                'setsid', # setsid - run a program in a new session                                                                                                       
+                ['setsid', 'nautilus', '--no-desktop', '%s/%s' % (root, path.strip('/'))],
+                env=os.environ
+            )
+        else:
+            f = reactor.spawnProcess(
+                protocol.ProcessProtocol(),
+                'setsid', # setsid - run a program in a new session
+                ['setsid', 'xdg-open', '%s/%s' % (root, path.strip('/'))],
+                env=os.environ
+            )
         handler.success(request)
     
     def account(self, request, handler, root='home'):
