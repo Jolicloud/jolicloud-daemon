@@ -2,6 +2,8 @@
 
 import os
 import optparse
+import string
+import random
 
 parser = optparse.OptionParser(usage='%prog [options]')
 
@@ -58,6 +60,8 @@ if options.use_system:
 
 if options.port:
     os.environ.setdefault('JPD_PORT', options.port)
+
+os.environ.setdefault('JD_SESSION', ''.join(random.choice(string.ascii_letters) for i in xrange(32)))
 
 from jolicloud_daemon.main import start
 

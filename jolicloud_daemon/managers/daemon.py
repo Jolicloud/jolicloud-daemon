@@ -38,11 +38,14 @@ class DaemonManager(LinuxSessionManager):
         return False
     
     def version(self, request, handler):
-        return '1.2.6'
+        return '1.2.7'
     
     def computer(self, request, handler):
         # Returns uuid, password and oem
-        retval = {'hostname': os.uname()[1]}
+        retval = {
+            'hostname': os.uname()[1],
+            'session': os.environ.get('JD_SESSION', ''),
+        }
         # OEM
         try:
             cp = SafeConfigParser()
