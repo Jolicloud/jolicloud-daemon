@@ -1,5 +1,5 @@
 Source: jolicloud-daemon
-Section: jolicloud/net
+Section: net
 Priority: optional
 Maintainer: Jolicloud developers <developers@jolicloud.org>
 Build-Depends: cdbs (>= 0.4.90~), debhelper (>= 7), python (>= 2.7)

@@ -1,4 +1,4 @@
-jolicloud-daemon (1.2.7) robby; urgency=low
+jolicloud-daemon (1.2.7) precise; urgency=low
 
   * Added a JD_SESSION env variable to authenticate calls to get_file.rpy in https.
 
